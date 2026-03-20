@@ -1,35 +1,27 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { generateOllama } from '@/lib/ollama';
 
 export async function POST(req: Request) {
   try {
-    const { styles } = await req.json(); // e.g., 'Indian + Korean'
-    
-    if (!styles) {
-      return NextResponse.json({ error: 'Styles to fuse are required' }, { status: 400 });
-    }
+    const { styles } = await req.json();
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const prompt = `Fuse these cultures: "${styles}". 
+    Design a hybrid outfit that blends both aesthetics.
     
-    const prompt = `Act as a "Cultural Fusion Fashion Creator". 
-    Fuse these cultures: "${styles}".
-    Describe a signature hybrid outfit and explain the fusion elements.
-    Return JSON:
+    Return ONLY JSON:
     {
-      "fusionName": "...",
-      "outfitDescription": "...",
-      "keyElements": ["Element 1", "Element 2"],
-      "colorPalette": ["#hex1", "#hex2"],
-      "visualDescriptionForAI": "A text description to generate an image from"
+      "conceptName": "Name of the fusion",
+      "description": "stylist design notes",
+      "keyElements": ["element1", "element2"]
     }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const data = JSON.parse(response.text().match(/\{[\s\S]*\}/)![0]);
+    const response = await generateOllama({
+      model: 'mistral',
+      prompt,
+      format: 'json'
+    });
 
-    return NextResponse.json(data);
+    return NextResponse.json(JSON.parse(response));
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

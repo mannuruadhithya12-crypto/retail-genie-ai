@@ -1,56 +1,48 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import dbConnect from '@/lib/mongodb';
+import { generateOllama } from '@/lib/ollama';
 import { ClothingItem } from '@/lib/models';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { connectToDatabase } from '@/lib/mongodb';
 
 export async function GET(req: Request, { params }: { params: { productId: string } }) {
   try {
+    await connectToDatabase();
     const { productId } = params;
-    
-    await dbConnect();
     const item = await ClothingItem.findById(productId);
-    
+
     if (!item) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-    
     const prompt = `Act as a "Sustainability Fashion Expert". 
     Analyze this product: ${JSON.stringify(item)}.
-    Provide:
-    1. An eco-score out of 100 based on materials and brand.
-    2. Estimated CO2 footprint in kg.
-    3. Estimated durability in washes.
+    Provide eco-score, CO2 impact, and durability.
     
-    Return JSON:
+    Return ONLY JSON:
     {
       "ecoScore": 0-100,
-      "co2Estimate": "...",
-      "durabilityWashes": 0,
-      "sustainabilityReport": "..."
+      "co2Estimate": "e.g. 5.2kg",
+      "durabilityWashes": number,
+      "materialAnalysis": "short text"
     }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const data = JSON.parse(response.text().match(/\{[\s\S]*\}/)![0]);
+    const response = await generateOllama({
+      model: 'phi',
+      prompt,
+      format: 'json'
+    });
 
-    // Update item if score is missing
-    if (!item.sustainability?.score) {
-      item.sustainability = {
-        score: data.ecoScore,
-        co2: data.co2Estimate,
-        durability: data.durabilityWashes
-      };
-      await item.save();
-    }
+    const result = JSON.parse(response);
+    
+    // Cache the result in MongoDB if needed
+    item.sustainability = {
+      ecoScore: result.ecoScore,
+      co2Estimate: result.co2Estimate,
+      durabilityWashes: result.durabilityWashes
+    };
+    await item.save();
 
-    return NextResponse.json(data);
+    return NextResponse.json(result);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-// Next.js requirement for dynamic route segment
-export const dynamic = 'force-dynamic';

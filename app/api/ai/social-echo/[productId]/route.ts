@@ -1,34 +1,29 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { generateOllama } from '@/lib/ollama';
 
 export async function GET(req: Request, { params }: { params: { productId: string } }) {
   try {
     const { productId } = params;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-    
     const prompt = `Act as a "Social Sentiment Fashion Critic". 
-    Fetch simulated public sentiment for product ID: "${productId}".
-    Aggregate data from reviews and social mentions.
+    Analyze public sentiment for this product: "${productId}".
     
-    Return JSON:
+    Return ONLY JSON:
     {
       "sentimentScore": 0-100,
-      "breakdown": { "positive": "...", "neutral": "...", "negative": "..." },
-      "commonComments": ["...", "..."],
-      "socialVerdict": "Buy / Wait / Skip"
+      "commonComments": ["comment1", "comment2"],
+      "socialVerdict": "Buy/Consider/Skip",
+      "breakdown": {"positive": "80%", "negative": "20%"}
     }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const data = JSON.parse(response.text().match(/\{[\s\S]*\}/)![0]);
+    const response = await generateOllama({
+      model: 'mistral',
+      prompt,
+      format: 'json'
+    });
 
-    return NextResponse.json(data);
+    return NextResponse.json(JSON.parse(response));
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-// Next.js requirement for dynamic route segment
-export const dynamic = 'force-dynamic';

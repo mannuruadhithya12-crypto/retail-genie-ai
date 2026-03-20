@@ -1,48 +1,30 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import dbConnect from '@/lib/mongodb';
-import { SavedOutfit, AIHistory } from '@/lib/models';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { generateOllama } from '@/lib/ollama';
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await req.json();
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
+    const { recentOutfits, recentHistory } = await req.json();
 
-    await dbConnect();
-    
-    // Fetch user context
-    const recentOutfits = await SavedOutfit.find({ userId }).limit(5).populate('outfitId');
-    const recentHistory = await AIHistory.find({ userId }).limit(10);
-    
-    const userContext = JSON.stringify({ recentOutfits, recentHistory });
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-    
     const prompt = `Act as a "Future Style Predictor". 
-    Based on this user's history: ${userContext}.
-    Predict their fashion evolution over the next 6 months.
-    1. Identify a style trend they are moving toward.
-    2. Suggest 3 items for a "Long-term Investment Wardrobe".
+    Analyze this history: ${JSON.stringify({ recentOutfits, recentHistory })}
+    Predict the next logical evolution of their style and suggest 2 investment pieces.
     
-    Return JSON:
+    Return ONLY JSON:
     {
-      "trendForecast": "Description of trend",
-      "evolutionReasoning": "Why this trend fits",
+      "predictedTrend": "Trend name",
+      "reasoning": "stylist analysis",
       "investmentPieces": [
-        { "item": "...", "priority": "high", "reason": "..." }
+        {"name": "Item Name", "reason": "why buy this"}
       ]
     }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const data = JSON.parse(response.text().match(/\{[\s\S]*\}/)![0]);
+    const response = await generateOllama({
+      model: 'llama3',
+      prompt,
+      format: 'json'
+    });
 
-    return NextResponse.json(data);
+    return NextResponse.json(JSON.parse(response));
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

@@ -1,35 +1,30 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { generateOllama } from '@/lib/ollama';
 
 export async function POST(req: Request) {
   try {
-    const { images } = await req.json(); // Array of up to 4 images
-    
-    if (!images || images.length === 0) {
-      return NextResponse.json({ error: 'At least one image is required' }, { status: 400 });
-    }
+    const { images } = await req.json();
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-    
     const prompt = `Analyze these ${images.length} people's styles and colors for "Group Coordination".
-    Create a harmonious group outfit theme.
-    Return JSON:
+    Identify dominant colors and styles. Suggest a theme that coordinates everyone.
+    
+    Return ONLY JSON:
     {
-      "themeName": "...",
-      "coordinationLogic": "Why these work together",
-      "individualSuggestions": [
-        { "person": 1, "recommendation": "..." },
-        { "person": 2, "recommendation": "..." }
-      ]
+      "themeName": "Theme title",
+      "coordinationTips": ["tip1", "tip2"],
+      "suggestedColors": ["#hex1", "#hex2"],
+      "stylingVerdict": "summary text"
     }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const data = JSON.parse(response.text().match(/\{[\s\S]*\}/)![0]);
+    // Use the first image for vision analysis in this demo
+    const response = await generateOllama({
+      model: 'llava',
+      prompt,
+      images: [images[0].split(',')[1]],
+      format: 'json'
+    });
 
-    return NextResponse.json(data);
+    return NextResponse.json(JSON.parse(response));
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

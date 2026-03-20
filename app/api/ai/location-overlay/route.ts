@@ -1,38 +1,29 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { generateOllama } from '@/lib/ollama';
 
 export async function POST(req: Request) {
   try {
     const { outfitImage, backgroundImage } = await req.json();
-    
-    if (!outfitImage || !backgroundImage) {
-      return NextResponse.json({ error: 'Outfit and Background images are required' }, { status: 400 });
-    }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-    
     const prompt = `Act as a "Location Overlay Stylist". 
     Analyze this background: [Background Image] and this outfit: [Outfit Image].
-    1. Describe how the colors of the outfit interact with the background lighting.
-    2. Suggest a specific "Pose" or "Angle" for the best photo in this street/office/beach setting.
+    Predict how the lighting and vibe match.
     
-    Return JSON:
+    Return ONLY JSON:
     {
       "lightingMatchScore": 0-100,
-      "aestheticLogic": "How it blends",
-      "photoTips": ["Tip 1", "Tip 2"]
+      "styleVerdict": "how it fits the location",
+      "compositedImageUrl": "USE_THE_OUTFIT_IMAGE_URL_AS_RESULT"
     }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const data = JSON.parse(response.text().match(/\{[\s\S]*\}/)![0]);
-
-    return NextResponse.json({
-      ...data,
-      compositedImageUrl: outfitImage // In production, use canvas/ffmpeg for real compositing
+    const response = await generateOllama({
+      model: 'llava',
+      prompt,
+      images: [outfitImage.split(',')[1], backgroundImage.split(',')[1]],
+      format: 'json'
     });
+
+    return NextResponse.json(JSON.parse(response));
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
