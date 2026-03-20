@@ -20,7 +20,7 @@ import {
   Check,
   Leaf,
 } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
@@ -144,6 +144,9 @@ export function TryOnModal({ open, onOpenChange, product, onSave }: TryOnModalPr
               <Sparkles className="h-5 w-5 text-primary" />
               Virtual Try-On
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Upload your photo to virtually try on this garment
+            </DialogDescription>
             <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
               <X className="h-5 w-5" />
             </Button>

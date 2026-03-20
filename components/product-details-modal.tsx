@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { X, Sparkles, Heart, ExternalLink, Leaf, Droplets, Star, ThumbsUp } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -55,6 +55,9 @@ export function ProductDetailsModal({
         <DialogHeader className="sticky top-0 z-10 bg-background px-6 py-4 border-b border-border">
           <div className="flex items-center justify-between">
             <DialogTitle>{product.name}</DialogTitle>
+            <DialogDescription className="sr-only">
+              Product details, pricing, and sustainability information
+            </DialogDescription>
             <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
               <X className="h-5 w-5" />
             </Button>

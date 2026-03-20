@@ -22,6 +22,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -141,6 +142,9 @@ export function SavedOutfitsView() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>{selectedOutfit?.name}</DialogTitle>
+              <DialogDescription className="sr-only">
+                View saved outfit details and notes
+              </DialogDescription>
               <Button variant="ghost" size="icon" onClick={() => setSelectedOutfit(null)}>
                 <X className="h-5 w-5" />
               </Button>

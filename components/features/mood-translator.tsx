@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Sparkles, X } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { moodOptions } from '@/lib/mock-data'
 import type { Mood } from '@/lib/types'
@@ -50,6 +50,9 @@ export function MoodTranslator({ open, onOpenChange, onSelectMood }: MoodTransla
               <Sparkles className="h-5 w-5 text-primary" />
               How are you feeling today?
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Select your mood to get personalized outfit suggestions
+            </DialogDescription>
             <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
               <X className="h-5 w-5" />
             </Button>

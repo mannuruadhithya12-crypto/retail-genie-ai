@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { CalendarDays, Plus, X, Sparkles } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -67,6 +67,9 @@ export function CalendarAgent({ open, onOpenChange, onGenerateOutfits }: Calenda
               <CalendarDays className="h-5 w-5 text-primary" />
               Calendar Agent
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Add upcoming events to get personalized outfit suggestions
+            </DialogDescription>
             <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
               <X className="h-5 w-5" />
             </Button>

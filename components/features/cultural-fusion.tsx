@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Globe, X, Sparkles, Plus } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -67,6 +67,9 @@ export function CulturalFusion({ open, onOpenChange, onGenerate }: CulturalFusio
               <Globe className="h-5 w-5 text-primary" />
               Cultural Fusion Creator
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Mix fashion elements from different cultures to create unique outfits
+            </DialogDescription>
             <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
               <X className="h-5 w-5" />
             </Button>
