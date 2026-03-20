@@ -16,7 +16,14 @@ export async function POST(request: Request) {
       )
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.5-flash',
+      tools: [
+        {
+          googleSearch: {},
+        } as any,
+      ],
+    })
 
     const systemPrompt = `You are an elite, avant-garde fashion stylist for the premium luxury brand Retail-Genie.
 The user has the following preferences:
@@ -29,11 +36,45 @@ The user has the following preferences:
 - Shopping for: ${preferences?.shopFor || 'self'}
 
 CRITICAL INSTRUCTIONS:
-- Be highly sophisticated, poetic, and elevated in your tone (like a Vogue editor or a luxury personal shopper).
-- DO NOT use generic bullet points like "The Swimsuit", "The Cover-up". Avoid simple numerical lists.
-- Instead, use elegant markdown components: blockquotes, italicized styling, or thematic section headers (e.g., *The Silhouette*, *The Palette*, *The Finishes*).
-- Describe textures, silhouettes, and color harmony poetically and precisely. Your recommendations must feel "advanced" and highly curated.
-- Never give basic or boring advice. Push the boundaries while respecting the user's climate and body type.`
+You are an AI stylist that MUST output ONLY a pure, valid JSON object following this exact schema:
+{
+  "message": "Your short, concise, sophisticated styling advice (max 3 sentences).",
+  "products": [
+    {
+      "id": "unique-id",
+      "name": "Exact Product Name",
+      "brand": "Store or Designer Name",
+      "imageUrl": "USE_UNSPLASH_PLACEHOLDER_PROVIDED_BELOW",
+      "priceMin": 85.00,
+      "priceMax": 85.00,
+      "currency": "USD",
+      "verdict": "strong-buy" | "consider" | "skip",
+      "verdictReasons": ["Great quality", "Perfect for climate"],
+      "reviewSentiment": "Summarized reviews and ratings found online",
+      "retailers": [
+        {
+          "name": "Store Name",
+          "price": 85.00,
+          "url": "REAL_HTTPS_PRODUCT_PAGE_URL",
+          "inStock": true
+        }
+      ]
+    }
+  ]
+}
+
+- SPEED TRICK: Suggest EXACTLY 2 products! Do not suggest more. This prevents you from taking too long.
+- YOU MUST USE GOOGLE SEARCH to find actual real-world products.
+- Provide REAL product page URLs for the 'url' field.
+- IMAGES: Because real image URLs often break hotlinking, you MUST use one of these high-quality placeholder URLs for 'imageUrl':
+  * Shirts: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400"
+  * Jackets: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=400"
+  * Pants/Bottoms: "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&q=80&w=400"
+  * Shoes: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=400"
+  * Sweaters/Other: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&q=80&w=400"
+- If you cannot find a real product page URL, do not include the product.
+- Evaluate each item to give a genuine "verdict" (strong-buy, consider, skip).
+- ONLY output the raw JSON object. Do not wrap in markdown \`\`\`json blocks.`
 
     const formattedHistory = messages.map((m: any) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
@@ -51,10 +92,23 @@ CRITICAL INSTRUCTIONS:
     const result = await chat.sendMessage(message)
     const responseText = result.response.text()
 
+    let replyData;
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        replyData = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON object found in response.');
+      }
+    } catch (e) {
+      console.error('Failed to parse JSON out of response:', responseText)
+      throw new Error('AI returned malformed data. Please try again.')
+    }
+
     return NextResponse.json({
       success: true,
-      message: responseText,
-      products: [],
+      message: replyData.message || 'Here are my curated recommendations.',
+      products: replyData.products || [],
     })
   } catch (error: any) {
     console.error('Chat API error:', error)

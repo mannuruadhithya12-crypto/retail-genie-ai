@@ -20,10 +20,26 @@ import {
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { mockProducts } from '@/lib/mock-data'
+import dynamic from 'next/dynamic'
+const ARMirror = dynamic(() => import('../ar/ARMirror').then(mod => mod.ARMirror), { ssr: false })
+import type { Garment } from '../ar/GarmentLayerManager'
+import { useEffect } from 'react'
 
 export function AtelierView() {
   const [isCamerActive, setIsCameraActive] = useState(false)
   const [selectedWardrobeItem, setSelectedWardrobeItem] = useState<string | null>(null)
+  const [clothingDb, setClothingDb] = useState<Garment[]>([])
+
+  useEffect(() => {
+    fetch('/api/clothing')
+      .then(res => res.json())
+      .then(data => setClothingDb(data))
+      .catch(console.error);
+  }, []);
+
+  const activeGarments = selectedWardrobeItem 
+    ? clothingDb.filter(g => g.id === selectedWardrobeItem) 
+    : [];
 
   const wardrobeItems = [
     { id: '1', name: 'Cyber-Denim Shell', brand: 'Nordic Peak', image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=400' },
@@ -47,87 +63,94 @@ export function AtelierView() {
               <Button variant="outline" className="rounded-full bg-white/5 border-white/10 text-xs font-headline uppercase tracking-widest h-11 px-6 hover:bg-white/10">
                 <Upload className="mr-2 h-4 w-4" /> Upload Photo
               </Button>
-              <Button className="rounded-full bg-gradient-to-r from-primary to-primary-container text-white text-xs font-headline font-bold uppercase tracking-widest h-11 px-6 shadow-[0_0_20px_rgba(219,144,255,0.3)]">
-                <Video className="mr-2 h-4 w-4" /> Start Camera
+              <Button onClick={() => setIsCameraActive(!isCamerActive)} className="rounded-full bg-gradient-to-r from-primary to-primary-container text-white text-xs font-headline font-bold uppercase tracking-widest h-11 px-6 shadow-[0_0_20px_rgba(219,144,255,0.3)]">
+                <Video className="mr-2 h-4 w-4" /> {isCamerActive ? 'Stop Camera' : 'Start Camera'}
               </Button>
             </div>
           </div>
 
           {/* Main Camera Preview Box */}
-          <div className="relative aspect-[4/3] w-full rounded-3xl overflow-hidden bg-slate-900 border border-white/5 group shadow-2xl">
-            <Image 
-              src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&q=80&w=1200" 
-              alt="Virtual Try-On Model"
-              fill
-              className="object-cover opacity-60 grayscale-[0.2]"
-            />
-            
-            {/* AR UI Elements Overlay */}
-            <div className="absolute inset-0 p-8 flex flex-col justify-between pointer-events-none">
-              <div className="flex justify-between items-start">
-                <motion.div 
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="glass-panel p-4 rounded-2xl border border-white/10 pointer-events-auto shadow-xl"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-secondary animate-pulse shadow-[0_0_8px_#5f9eff]"></div>
-                    <span className="text-[10px] font-headline tracking-widest text-secondary font-bold uppercase">Live Body Mapping</span>
-                  </div>
-                  <div className="mt-2 space-y-1.5">
-                    <div className="w-32 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                      <motion.div 
-                        initial={{ width: "0%" }}
-                        animate={{ width: "75%" }}
-                        className="h-full bg-secondary shadow-[0_0_8px_#5f9eff]"
-                      />
+          <div className={`relative ${isCamerActive ? 'h-[80vh]' : 'aspect-[4/3]'} w-full rounded-3xl overflow-hidden bg-slate-900 border border-white/5 group shadow-2xl`}>
+            {isCamerActive ? (
+              <ARMirror selectedGarments={activeGarments} />
+            ) : (
+              <>
+                <Image 
+                  src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&q=80&w=1200" 
+                  alt="Virtual Try-On Model"
+                  fill
+                  className="object-cover opacity-60 grayscale-[0.2]"
+                />
+                
+                {/* AR UI Elements Overlay */}
+                <div className="absolute inset-0 p-8 flex flex-col justify-between pointer-events-none">
+                  <div className="flex justify-between items-start">
+                    <motion.div 
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="glass-panel p-4 rounded-2xl border border-white/10 pointer-events-auto shadow-xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-secondary animate-pulse shadow-[0_0_8px_#5f9eff]"></div>
+                        <span className="text-[10px] font-headline tracking-widest text-secondary font-bold uppercase">Live Body Mapping</span>
+                      </div>
+                      <div className="mt-2 space-y-1.5">
+                        <div className="w-32 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: "0%" }}
+                            animate={{ width: "75%" }}
+                            className="h-full bg-secondary shadow-[0_0_8px_#5f9eff]"
+                          />
+                        </div>
+                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">Stability: 98.4%</p>
+                      </div>
+                    </motion.div>
+
+                    <div className="flex flex-col gap-3 pointer-events-auto">
+                      <button className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-primary transition-all hover:scale-110 border border-white/10">
+                        <Maximize className="h-4 w-4" />
+                      </button>
+                      <button className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-primary transition-all hover:scale-110 border border-white/10">
+                        <Grid className="h-4 w-4" />
+                      </button>
+                      <button className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-primary transition-all hover:scale-110 border border-white/10">
+                        <RefreshCw className="h-4 w-4" />
+                      </button>
                     </div>
-                    <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">Stability: 98.4%</p>
                   </div>
-                </motion.div>
 
-                <div className="flex flex-col gap-3 pointer-events-auto">
-                  <button className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-primary transition-all hover:scale-110 border border-white/10">
-                    <Maximize className="h-4 w-4" />
-                  </button>
-                  <button className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-primary transition-all hover:scale-110 border border-white/10">
-                    <Grid className="h-4 w-4" />
-                  </button>
-                  <button className="w-10 h-10 rounded-full glass-panel flex items-center justify-center text-slate-300 hover:text-primary transition-all hover:scale-110 border border-white/10">
-                    <RefreshCw className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+                  {/* Scan Line Animation */}
+                  <div className="scan-line opacity-30"></div>
 
-              {/* Scan Line Animation */}
-              <div className="scan-line opacity-30"></div>
-
-              <div className="flex justify-center items-center pointer-events-auto">
-                <motion.button 
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex flex-col items-center gap-3 group"
-                >
-                  <div className="w-20 h-20 rounded-full glass-panel border-4 border-primary flex items-center justify-center text-primary shadow-[0_0_30px_rgba(219,144,255,0.4)] cursor-pointer">
-                    <Sparkles className="h-10 w-10 fill-primary/10" />
+                  <div className="flex justify-center items-center pointer-events-auto">
+                    <motion.button 
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setIsCameraActive(true)}
+                      className="flex flex-col items-center gap-3 group"
+                    >
+                      <div className="w-20 h-20 rounded-full glass-panel border-4 border-primary flex items-center justify-center text-primary shadow-[0_0_30px_rgba(219,144,255,0.4)] cursor-pointer">
+                        <Sparkles className="h-10 w-10 fill-primary/10" />
+                      </div>
+                      <span className="text-[10px] font-headline tracking-widest uppercase font-bold text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                        Try Outfit
+                      </span>
+                    </motion.button>
                   </div>
-                  <span className="text-[10px] font-headline tracking-widest uppercase font-bold text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-                    Try Outfit
-                  </span>
-                </motion.button>
-              </div>
 
-              <div className="flex justify-between items-end">
-                <div className="glass-panel p-4 rounded-2xl border border-white/10 shadow-xl">
-                  <p className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mb-1">Detected Form</p>
-                  <p className="text-sm font-headline font-bold text-white tracking-tight">ATHLETIC - SIZE M</p>
+                  <div className="flex justify-between items-end">
+                    <div className="glass-panel p-4 rounded-2xl border border-white/10 shadow-xl">
+                      <p className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mb-1">Detected Form</p>
+                      <p className="text-sm font-headline font-bold text-white tracking-tight">ATHLETIC - SIZE M</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="px-3 py-1 glass-panel rounded-full text-[10px] tracking-widest uppercase font-bold text-white border border-white/10">4K Live</span>
+                      <span className="px-3 py-1 glass-panel rounded-full text-[10px] tracking-widest uppercase font-bold text-tertiary border border-tertiary/30">Real-time RT</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <span className="px-3 py-1 glass-panel rounded-full text-[10px] tracking-widest uppercase font-bold text-white border border-white/10">4K Live</span>
-                  <span className="px-3 py-1 glass-panel rounded-full text-[10px] tracking-widest uppercase font-bold text-tertiary border border-tertiary/30">Real-time RT</span>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </section>
 

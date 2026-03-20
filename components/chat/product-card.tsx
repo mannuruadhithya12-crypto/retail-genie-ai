@@ -55,10 +55,24 @@ export function ProductCard({ product, onTryOn, onSave, onDetails }: ProductCard
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
         
         {/* Verdict Badge */}
-        <Badge className={cn('absolute top-3 right-3', verdict.className)}>
-          {verdict.icon && <verdict.icon className="h-3 w-3 mr-1" />}
-          {verdict.label}
-        </Badge>
+        {verdict && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge className={cn('absolute top-3 right-3 cursor-help', verdict.className)}>
+                  {verdict.icon && <verdict.icon className="h-3 w-3 mr-1" />}
+                  {verdict.label}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="font-semibold mb-1">Our Prediction: {verdict.label}</p>
+                {product.verdictReasons?.map((r, i) => (
+                  <p key={i} className="text-xs text-muted-foreground">• {r}</p>
+                ))}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
 
         {/* Sustainability indicators */}
         {product.sustainabilityScore && (
@@ -105,9 +119,12 @@ export function ProductCard({ product, onTryOn, onSave, onDetails }: ProductCard
         </div>
 
         {product.reviewSentiment && (
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {product.reviewSentiment}
-          </p>
+          <div className="bg-secondary/10 p-2 rounded-md border border-secondary/20">
+            <p className="text-[10px] text-secondary font-bold uppercase tracking-wider mb-0.5">Reviews Summary</p>
+            <p className="text-xs text-muted-foreground line-clamp-2 italic">
+              "{product.reviewSentiment}"
+            </p>
+          </div>
         )}
 
         <div className="flex gap-2 pt-1">
@@ -120,13 +137,27 @@ export function ProductCard({ product, onTryOn, onSave, onDetails }: ProductCard
             <Sparkles className="h-3.5 w-3.5" />
             Try On
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onDetails(product)}
-          >
-            Details
-          </Button>
+          
+          {product.retailers?.[0]?.url ? (
+            <Button
+              size="sm"
+              variant="outline"
+              asChild
+            >
+              <a href={product.retailers[0].url} target="_blank" rel="noopener noreferrer">
+                Buy Now
+              </a>
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onDetails(product)}
+            >
+              Details
+            </Button>
+          )}
+
           <Button
             size="icon"
             variant="ghost"

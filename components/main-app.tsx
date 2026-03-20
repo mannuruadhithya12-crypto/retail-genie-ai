@@ -15,7 +15,6 @@ import { LocationOverlay } from './features/location-overlay'
 import { GroupOutfit } from './features/group-outfit'
 import { VoiceStylist } from './features/voice-stylist'
 import { FutureStyle } from './features/future-style'
-import { FeatureButtons } from './features/feature-buttons'
 import { SavedOutfitsView } from './views/saved-outfits-view'
 import { HistoryView } from './views/history-view'
 import { PreferencesView } from './views/preferences-view'
@@ -325,20 +324,7 @@ export function MainApp() {
         return <DashboardView onStartStyling={() => setCurrentView('chat')} onTryVirtualOutfit={() => setCurrentView('atelier')} />
       case 'chat':
       default:
-        return (
-          <>
-            {/* Feature buttons bar */}
-            <div className="absolute top-4 right-4 z-10">
-              <FeatureButtons
-                onMoodClick={() => setShowMoodTranslator(true)}
-                onCalendarClick={() => setShowCalendarAgent(true)}
-                onCulturalClick={() => setShowCulturalFusion(true)}
-                onSustainabilityClick={handleSustainabilityFocus}
-              />
-            </div>
-            <ChatArea onTryOn={handleTryOn} onProductDetails={handleProductDetails} />
-          </>
-        )
+        return <ChatArea onTryOn={handleTryOn} onProductDetails={handleProductDetails} />
     }
   }
 
@@ -352,30 +338,6 @@ export function MainApp() {
         <main className="relative flex-1 overflow-y-auto pt-20 pb-32 px-12">
           {renderContent()}
         </main>
-
-        {/* Floating Chat Input Bar */}
-        <footer className="fixed bottom-8 left-80 right-8 z-50">
-          <div className="max-w-4xl mx-auto glass-morphism rounded-full p-2 border border-white/10 shadow-2xl">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="w-10 h-10 rounded-full text-slate-400 hover:text-white transition-colors">
-                <Plus className="h-5 w-5" />
-              </Button>
-              <input 
-                className="flex-1 bg-transparent border-none focus:ring-0 text-white text-sm py-3 px-2 placeholder:text-slate-500" 
-                placeholder="Ask your AI Stylist: 'What should I wear to a tech gala in Tokyo?'"
-                type="text"
-              />
-              <div className="flex items-center gap-2 pr-2">
-                <Button variant="ghost" size="icon" className="w-10 h-10 rounded-full text-slate-400 hover:text-white transition-colors">
-                  <Mic className="h-5 w-5" />
-                </Button>
-                <Button className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-lg shadow-primary/20 hover:scale-105 transition-transform p-0">
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </footer>
       </div>
 
       {/* Modals */}

@@ -1,8 +1,10 @@
 export type GarmentType = 'base' | 'mid' | 'outer' | 'bottom';
+export type AttachmentType = 'upper_body' | 'lower_body';
 
 export interface Garment {
   id: string;
   type: GarmentType;
+  attachmentType: AttachmentType;
   modelUrl: string;
   scale: number[];
   positionOffset: number[];

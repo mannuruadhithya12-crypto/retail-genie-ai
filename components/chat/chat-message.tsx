@@ -56,7 +56,14 @@ export function ChatMessageComponent({
           )}
         >
           <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]}
+              components={{
+                a: ({node, ...props}) => (
+                  <a {...props} target="_blank" rel="noopener noreferrer" className="text-secondary font-bold underline underline-offset-4 hover:text-white transition-colors" />
+                )
+              }}
+            >
               {message.content}
             </ReactMarkdown>
           </div>
