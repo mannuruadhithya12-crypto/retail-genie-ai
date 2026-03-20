@@ -1,83 +1,72 @@
 import { NextResponse } from 'next/server'
 import { chatOllama } from '@/lib/ollama'
 import { TavilySearch } from '@/lib/search'
-import { RecommendationEngine } from '@/lib/recommendation'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { message, messages = [], preferences } = body
 
-    // 1. Perform Real-Time Online Search
+    // 1. Perform Real-Time Online Search (Fast search)
     const searchResults = await TavilySearch.searchFashion(message);
     const context = TavilySearch.formatResultsForAI(searchResults);
 
-    const systemPrompt = `You are an elite, avant-garde fashion stylist for the premium luxury brand Retail-Genie.
+    // 2. Single Reasoning Pass - Use Llama3 to synthesize everything
+    const systemPrompt = `You are an elite fashion stylist for Retail-Genie.
+    
+    ONLINE SEARCH CONTEXT:
+    ${context || "No real-time results. Use fashion knowledge."}
 
-ONLINE BROWSER MODE:
-I have browsed the internet for your request. Use these real-time results to suggest ACTUAL products with real links and prices:
-${context || "No real-time results found. Falling back to fashion principles."}
+    USER PREFERENCES:
+    ${JSON.stringify(preferences || {})}
 
-The user has the following preferences:
-- Style: ${preferences?.stylePreferences?.join(', ') || 'casual'}
-- Climate: ${preferences?.climate || 'temperate'}
-- Budget Currency: ${preferences?.currency || 'USD'}
-
-CRITICAL: You MUST output ONLY a pure, valid JSON object with REAL DATA from the results.
-Schema:
-{
-  "message": "Your styling advice based on the browsing results.",
-  "products": [
+    TASK:
+    Analyze the user's message and the search results. Suggest 2 real products.
+    
+    RETURN ONLY PURE JSON:
     {
-      "id": "unique-id",
-      "name": "REAL PRODUCT NAME",
-      "brand": "ZARA / H&M / ASOS",
-      "imageUrl": "REAL_IMAGE_FROM_SEARCH_OR_PLACEHOLDER",
-      "priceMin": 85.00,
-      "priceMax": 85.00,
-      "currency": "USD",
-      "verdict": "strong-buy",
-      "retailers": [{"name": "Site Name", "price": 85.0, "url": "HTML_LINK_TO_PRODUCT", "inStock": true}]
-    }
-  ]
-}
-IMPORTANT: Suggest 2 products. Return ONLY raw JSON.`
+      "message": "Stylist advice string",
+      "products": [
+        {
+          "id": "item-1",
+          "name": "Product Name",
+          "brand": "Store",
+          "imageUrl": "valid_url_or_placeholder",
+          "priceMin": 49.99,
+          "priceMax": 49.99,
+          "currency": "USD",
+          "verdict": "strong-buy",
+          "verdictReasons": ["Reason why this is a strong buy"],
+          "retailers": [{"name": "Site", "price": 49.99, "url": "link", "inStock": true}]
+        }
+      ]
+    }`;
 
-    const formattedHistory = messages.map((m: any) => ({
-      role: m.role === 'assistant' ? 'assistant' : 'user',
-      content: m.content || '',
-    }))
-
-    const chatMessages = [
+    const chatItems = [
       { role: 'system', content: systemPrompt },
-      ...formattedHistory,
+      ...messages.slice(-3).map((m: any) => ({ role: m.role, content: m.content })), // Limit history for speed
       { role: 'user', content: message }
-    ]
+    ];
 
-    // 2. AI Synthesis using Recommendation Engine
-    const recommendation = await RecommendationEngine.getOutfitRecommendation(message, preferences);
+    const responseText = await chatOllama('llama3', chatItems);
+    
+    let replyData;
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      replyData = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
+    } catch (e) {
+      console.error('JSON Error:', responseText);
+      replyData = { message: responseText.slice(0, 200), products: [] };
+    }
 
     return NextResponse.json({
       success: true,
-      message: recommendation.recommendation || 'Here are my curated recommendations.',
-      products: recommendation.outfit.map((o: any) => ({
-        id: o.productId,
-        name: o.name,
-        brand: o.brand,
-        imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400',
-        priceMin: 85.00,
-        priceMax: 85.00,
-        currency: 'USD',
-        verdict: o.verdict,
-        verdictReasons: [o.reason],
-        retailers: [{"name": o.brand, "price": 85.0, "url": o.shopUrl, "inStock": true}]
-      })),
+      message: replyData.message,
+      products: replyData.products || [],
     })
   } catch (error: any) {
-    console.error('Ollama Chat API error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to process chat message. Ensure Ollama is running.' },
-      { status: 500 }
-    )
+    console.error('Chat API error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
