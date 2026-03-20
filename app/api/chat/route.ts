@@ -101,9 +101,17 @@ You are an AI stylist that MUST output ONLY a pure, valid JSON object following 
       } else {
         throw new Error('No JSON object found in response.');
       }
-    } catch (e) {
-      console.error('Failed to parse JSON out of response:', responseText)
-      throw new Error('AI returned malformed data. Please try again.')
+    } catch (error: any) {
+      console.error('Chat error details:', error);
+      
+      let errorMessage = 'AI returned malformed data. Please try again.';
+      if (error.status === 429 || error.message?.includes('429')) {
+        errorMessage = 'Gemini Free Tier limit reached. Please wait 60 seconds and try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      throw new Error(errorMessage);
     }
 
     return NextResponse.json({
