@@ -20,15 +20,21 @@ const ClothingItemSchema = new Schema({
   brand: String,
   category: String,
   imageUrl: String,
-  modelUrl: String, // For AR
+  modelUrl: String, 
   price: Number,
   currency: { type: String, default: 'USD' },
+  rating: { type: Number, default: 0 },
+  reviewCount: { type: Number, default: 0 },
+  reviews: [String],
+  productUrl: String,
+  styleTags: [String],
   sustainability: {
     score: Number,
     co2: String,
     durability: Number
   },
-  tags: [String],
+  vectorEmbedding: [Number], // For semantic search
+  createdAt: { type: Date, default: Date.now },
 });
 
 // --- Outfits ---
