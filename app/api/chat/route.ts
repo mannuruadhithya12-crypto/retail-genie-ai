@@ -12,9 +12,9 @@ export async function POST(request: Request) {
     const context = TavilySearch.formatResultsForAI(searchResults);
 
     // 2. Single Reasoning Pass - Use Llama3 to synthesize everything
-    const systemPrompt = `You are an elite fashion stylist for Retail-Genie.
+    const systemPrompt = `You are an elite, real-time fashion scout for Retail-Genie.
     
-    ONLINE SEARCH CONTEXT:
+    REAL-TIME BROwsing CONTEXT:
     ${context || "No real-time results. Use fashion knowledge."}
 
     USER PREFERENCES:
@@ -23,21 +23,26 @@ export async function POST(request: Request) {
     TASK:
     Analyze the user's message and the search results. Suggest 2 real products.
     
+    CRITICAL: 
+    - Use the REAL product names, brands, AND Image URLs from the context provided above.
+    - NEVER use placeholder images if an image URL is available in the context.
+    - If a result has an 'Image: http...', you MUST use that in the "imageUrl" field.
+    
     RETURN ONLY PURE JSON:
     {
-      "message": "Stylist advice string",
+      "message": "Stylist advice string including specific prices seen in search.",
       "products": [
         {
           "id": "item-1",
-          "name": "Product Name",
-          "brand": "Store",
-          "imageUrl": "valid_url_or_placeholder",
+          "name": "REAL PRODUCT NAME",
+          "brand": "Actual Store (e.g. Zara)",
+          "imageUrl": "REAL_IMAGE_URL_FROM_CONTEXT",
           "priceMin": 49.99,
           "priceMax": 49.99,
           "currency": "USD",
           "verdict": "strong-buy",
-          "verdictReasons": ["Reason why this is a strong buy"],
-          "retailers": [{"name": "Site", "price": 49.99, "url": "link", "inStock": true}]
+          "verdictReasons": ["Actual reason based on search snippets"],
+          "retailers": [{"name": "Store", "price": 49.99, "url": "REAL_PRODUCT_URL", "inStock": true}]
         }
       ]
     }`;
