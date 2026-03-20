@@ -81,7 +81,7 @@ export function MainApp() {
     toast.success('Outfit saved!')
   }
 
-  const handleSelectMood = (mood: Mood) => {
+  const handleSelectMood = async (mood: Mood) => {
     let sessionId = currentSessionId
     if (!sessionId) {
       sessionId = createNewSession()
@@ -94,17 +94,41 @@ export function MainApp() {
       timestamp: new Date(),
     })
 
-    setTimeout(() => {
-      addMessage(sessionId!, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `Based on your **${mood}** mood, I've curated some pieces that will help you feel exactly that way. These selections consider your body type, skin tone, and the current weather in your area.`,
-        timestamp: new Date(),
-        products: mockProducts.slice(0, 3),
-      })
-    }, 1500)
-
     setCurrentView('chat')
+
+    try {
+      const response = await fetch('/api/ai/mood-outfit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ moodText: `I feel ${mood}`, userId: 'default-user' })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        addMessage(sessionId!, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `${data.emotionAnalysis}\n\n**Style:** ${data.style}\n**Suggested Palette:** ${data.colors.join(', ')}`,
+          timestamp: new Date(),
+          products: data.outfits.map((o: any) => ({
+            id: crypto.randomUUID(),
+            name: o.name,
+            brand: 'AI Suggestion',
+            imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400',
+            priceMin: 49,
+            priceMax: 199,
+            currency: 'USD',
+            verdict: 'strong-buy',
+            verdictReasons: o.items,
+            retailers: []
+          }))
+        })
+      }
+    } catch (error) {
+      console.error('Mood AI Error:', error);
+      toast.error('AI styling failed. Please try again.');
+    }
   }
 
   const handleCalendarOutfits = (events: { id: string; date: Date; title: string }[]) => {
