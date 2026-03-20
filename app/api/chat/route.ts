@@ -1,48 +1,65 @@
 import { NextResponse } from 'next/server'
 import { chatOllama } from '@/lib/ollama'
 import { TavilySearch } from '@/lib/search'
+import { ProductExtractor } from '@/lib/extractor'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { message, messages = [], preferences } = body
 
-    // 1. Perform Real-Time Online Search (Fast search)
+    // 1. Initial Discovery Search
     const searchResults = await TavilySearch.searchFashion(message);
-    const context = TavilySearch.formatResultsForAI(searchResults);
-
-    // 2. Single Reasoning Pass - Use Llama3 to synthesize everything
-    const systemPrompt = `You are an elite, real-time fashion scout for Retail-Genie.
     
-    REAL-TIME BROwsing CONTEXT:
-    ${context || "No real-time results. Use fashion knowledge."}
+    // 2. Deep Extraction for Top 2 Results (Sequential for stability)
+    const deepResults = [];
+    for (const res of searchResults.slice(0, 2)) {
+      const deepData = await ProductExtractor.deepExtract(res.url);
+      deepResults.push({
+        title: deepData.name || res.title,
+        url: res.url,
+        imageUrl: deepData.imageUrl || res.images?.[0] || 'none',
+        price: deepData.price || "See site",
+        snippet: res.content
+      });
+    }
+
+    const context = deepResults.map(r => 
+      `Product: ${r.title}\nURL: ${r.url}\nImage: ${r.imageUrl}\nPrice: ${r.price}\nSnippet: ${r.snippet}`
+    ).join('\n---\n');
+
+    // 3. AI Synthesis - Use the deep-extracted context
+    const systemPrompt = `You are a real-time fashion personal shopper for Retail-Genie.
+    
+    DEEP BROWSING CONTEXT (VERIFIED):
+    ${context || "No live products found. Advise based on fashion principles."}
 
     USER PREFERENCES:
     ${JSON.stringify(preferences || {})}
 
     TASK:
-    Analyze the user's message and the search results. Suggest 2 real products.
+    Suggest 2 EXACT items from the VERIFIED context above.
     
     CRITICAL: 
-    - Use the REAL product names, brands, AND Image URLs from the context provided above.
-    - NEVER use placeholder images if an image URL is available in the context.
-    - If a result has an 'Image: http...', you MUST use that in the "imageUrl" field.
+    - You MUST use the "Image" URL provided in the context for EACH item.
+    - Copy the "URL" exactly for the retailer link.
+    - Mention the "Price" if available.
     
-    RETURN ONLY PURE JSON:
+    FORMAT: ONLY JSON
     {
-      "message": "Stylist advice string including specific prices seen in search.",
+      "message": "Personal styling advice based on these exact finds.",
       "products": [
         {
-          "id": "item-1",
-          "name": "REAL PRODUCT NAME",
-          "brand": "Actual Store (e.g. Zara)",
-          "imageUrl": "REAL_IMAGE_URL_FROM_CONTEXT",
-          "priceMin": 49.99,
-          "priceMax": 49.99,
+          "id": "find-1",
+          "name": "EXACT PRODUCT NAME",
+          "brand": "Store Name",
+          "imageUrl": "VERIFIED_IMAGE_URL",
+          "priceMin": 49.00,
+          "priceMax": 49.00,
           "currency": "USD",
           "verdict": "strong-buy",
-          "verdictReasons": ["Actual reason based on search snippets"],
-          "retailers": [{"name": "Store", "price": 49.99, "url": "REAL_PRODUCT_URL", "inStock": true}]
+          "verdictReasons": ["Verified fit and style from recent browsing"],
+          "retailers": [{"name": "Store", "price": 49.0, "url": "DIRECT_LINK", "inStock": true}]
         }
       ]
     }`;
