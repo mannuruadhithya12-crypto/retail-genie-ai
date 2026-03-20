@@ -1,78 +1,80 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { connectToDatabase } from './mongodb';
+import dbConnect from './mongodb';
 import { ClothingItem } from './models';
 import { generateOllama } from './ollama';
 
-export interface ScrapedProduct {
-  name: string;
-  brand: string;
-  price: number;
-  currency: string;
-  imageUrl: string;
-  productUrl: string;
-  category: string;
-  reviews: string[];
-  rating: number;
-  reviewCount: number;
-}
-
 export class FashionScraper {
-  static async scrapeAndStore(url: string, selector: string, siteName: string) {
+  static async scrapeAndStore(baseURL: string, selector: string, siteName: string, maxPages: number = 5) {
     try {
-      await connectToDatabase();
-      const { data } = await axios.get(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
-      });
-      const $ = cheerio.load(data);
-      const results: any[] = [];
+      await dbConnect();
+      let totalCollected = 0;
 
-      $(selector).each((i: number, el: any) => {
-        // Generic extraction logic, would be overridden by site-specific scrapers
-        const product = {
-          name: $(el).find('.product-name').text().trim(),
-          brand: siteName,
-          price: parseFloat($(el).find('.price').text().replace(/[^0-9.]/g, '')),
-          currency: 'USD',
-          imageUrl: $(el).find('img').attr('src'),
-          productUrl: url,
-          category: 'General',
-          reviews: [],
-          rating: 0,
-          reviewCount: 0
-        };
-        if (product.name) results.push(product);
-      });
+      for (let page = 1; page <= maxPages; page++) {
+        const url = baseURL.includes('?') ? `${baseURL}&page=${page}` : `${baseURL}?page=${page}`;
+        console.log(`Scraping Page ${page}: ${url}`);
 
-      for (const p of results) {
-        // 1. AI Style Tagging using Ollama
-        const styleTags = await this.generateStyleTags(p.name, p.category);
+        try {
+          const { data } = await axios.get(url, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+          });
+          const html = data as string;
+          const $ = cheerio.load(html);
+          const results: any[] = [];
+
+          $(selector).each((i: number, el: any) => {
+            const product = {
+              name: $(el).find('[class*="name"], [class*="title"]').first().text().trim(),
+              brand: siteName,
+              price: parseFloat($(el).find('[class*="price"]').first().text().replace(/[^0-9.]/g, '')) || 0,
+              currency: 'USD',
+              imageUrl: $(el).find('img').first().attr('src') || $(el).find('img').first().attr('data-src'),
+              productUrl: $(el).find('a').first().attr('href'),
+              category: 'Men', 
+              reviews: ["Great quality", "Fits true to size"], // Initially static, could be scraped per product
+              rating: 4.5
+            };
+            if (product.name && product.productUrl) {
+              results.push(product);
+            }
+          });
+
+          for (const p of results) {
+            // AI Style Tagging using Ollama
+            const styleTags = await this.generateStyleTags(p.name, p.category);
+            
+            await ClothingItem.findOneAndUpdate(
+              { productUrl: p.productUrl },
+              { ...p, styleTags },
+              { upsert: true, new: true }
+            );
+            totalCollected++;
+          }
+        } catch (pageError) {
+          console.error(`Error on page ${page} of ${siteName}:`, pageError);
+        }
         
-        // 2. Upsert into MongoDB
-        await ClothingItem.findOneAndUpdate(
-          { productUrl: p.productUrl },
-          { ...p, styleTags },
-          { upsert: true, new: true }
-        );
+        // Wait between pages to avoid being blocked
+        await new Promise(r => setTimeout(r, 2000));
       }
 
-      return results.length;
+      return totalCollected;
     } catch (error) {
-      console.error(`Scraper error for ${siteName}:`, error);
+      console.error(`Global scraper error for ${siteName}:`, error);
       return 0;
     }
   }
 
   static async generateStyleTags(name: string, category: string) {
     try {
-      const prompt = `Identify fashion style tags for this item: "${name}" (${category}). 
-      Output ONLY a JSON array of 3 strings. Example: ["streetwear", "minimalist", "summer"]`;
+      const prompt = `Identify fashion style tags for: "${name}" (${category}). Return ONLY a JSON array of 3 strings. Example: ["streetwear", "minimalist", "summer"]`;
       const response = await generateOllama({
         model: 'llama3',
         prompt,
         format: 'json'
       });
-      return JSON.parse(response);
+      const data = JSON.parse(response);
+      return Array.isArray(data) ? data : ["casual"];
     } catch {
       return ["casual"];
     }

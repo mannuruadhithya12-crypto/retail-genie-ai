@@ -23,7 +23,7 @@ export class TavilySearch {
         max_results: 5
       });
 
-      return response.data.results as SearchResult[];
+      return (response.data as any).results as SearchResult[];
     } catch (error: any) {
       console.error('Tavily Search Error:', error.response?.data || error.message);
       return [];

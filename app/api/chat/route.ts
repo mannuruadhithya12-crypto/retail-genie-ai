@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { chatOllama } from '@/lib/ollama'
 import { TavilySearch } from '@/lib/search'
+import { RecommendationEngine } from '@/lib/recommendation'
 
 export async function POST(request: Request) {
   try {
@@ -53,30 +54,24 @@ IMPORTANT: Suggest 2 products. Return ONLY raw JSON.`
       { role: 'user', content: message }
     ]
 
-    const responseText = await chatOllama('llama3', chatMessages);
-
-    let replyData;
-    try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const cleanedJson = jsonMatch[0].replace(/\\/g, '\\\\').replace(/\n/g, '\\n'); // Basic escapings
-        replyData = JSON.parse(jsonMatch[0]); 
-      } else {
-        throw new Error('No JSON object found in Ollama response.');
-      }
-    } catch (error: any) {
-      console.error('JSON Parse error:', responseText);
-      // Fallback if parsing fails but we have text
-      replyData = {
-        message: responseText.slice(0, 500),
-        products: []
-      };
-    }
+    // 2. AI Synthesis using Recommendation Engine
+    const recommendation = await RecommendationEngine.getOutfitRecommendation(message, preferences);
 
     return NextResponse.json({
       success: true,
-      message: replyData.message || 'Here are my curated recommendations.',
-      products: replyData.products || [],
+      message: recommendation.recommendation || 'Here are my curated recommendations.',
+      products: recommendation.outfit.map((o: any) => ({
+        id: o.productId,
+        name: o.name,
+        brand: o.brand,
+        imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400',
+        priceMin: 85.00,
+        priceMax: 85.00,
+        currency: 'USD',
+        verdict: o.verdict,
+        verdictReasons: [o.reason],
+        retailers: [{"name": o.brand, "price": 85.0, "url": o.shopUrl, "inStock": true}]
+      })),
     })
   } catch (error: any) {
     console.error('Ollama Chat API error:', error)

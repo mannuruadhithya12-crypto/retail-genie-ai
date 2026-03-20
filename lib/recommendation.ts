@@ -1,31 +1,43 @@
 import { ClothingItem } from './models';
 import { generateOllama } from './ollama';
-import { connectToDatabase } from './mongodb';
+import dbConnect from './mongodb';
 
 export class RecommendationEngine {
   static async getOutfitRecommendation(userPrompt: string, preferences: any) {
-    await connectToDatabase();
+    await dbConnect();
 
-    // 1. Semantic Search (Simplified keyword search for this phase)
-    const keywords = userPrompt.split(' ');
+    // 1. Semantic Search using style tags and categories
+    const keywords = userPrompt.toLowerCase().split(' ');
     const products = await ClothingItem.find({
       $or: [
         { styleTags: { $in: keywords } },
-        { category: { $regex: keywords[0], $options: 'i' } }
+        { category: { $regex: keywords[0], $options: 'i' } },
+        { name: { $regex: keywords[0], $options: 'i' } }
       ]
     }).limit(6);
 
-    // 2. AI Synthesis using Ollama
-    const prompt = `You are an elite fashion AI. User wants: "${userPrompt}". 
-    Here are available real products: ${JSON.stringify(products.map(p => ({ name: p.name, brand: p.brand, price: p.price })))}.
+    // 2. AI Synthesis using Ollama (Llama3)
+    const prompt = `You are an elite, avant-garde fashion stylist for Retail-Genie.
+    User request: "${userPrompt}"
+    User Preferences: ${JSON.stringify(preferences)}
     
-    Synthesize a cohesive outfit and provide a verdict for each item (BUY/CONSIDER/SKIP).
+    Here are real products available in our database:
+    ${JSON.stringify(products.map(p => ({ id: p._id, name: p.name, brand: p.brand, price: p.price, shopUrl: p.productUrl })))}
+    
+    Task: Create a cohesive outfit from these real products. Provide a "BUY" verdict for the best matches.
     
     Return ONLY JSON:
     {
-      "recommendation": "Stylist summary advice",
+      "recommendation": "Expert stylist summary",
       "outfit": [
-        {"name": "Product Name", "verdict": "BUY", "reason": "why this matches user vibe"}
+        {
+          "productId": "mongo-id",
+          "name": "Product Name",
+          "brand": "Brand",
+          "verdict": "BUY",
+          "reason": "Why this matches the user vibe",
+          "shopUrl": "real-url"
+        }
       ]
     }`;
 
@@ -38,20 +50,23 @@ export class RecommendationEngine {
     return JSON.parse(response);
   }
 
-  static async getProductVerdict(productId: string) {
-    await connectToDatabase();
+  static async getSentimentVerdict(productId: string) {
+    await dbConnect();
     const product = await ClothingItem.findById(productId);
     if (!product) throw new Error('Product not found');
 
-    const prompt = `Analyze these real customer reviews for "${product.name}": ${JSON.stringify(product.reviews)}.
+    const prompt = `Analyze these real customer reviews for "${product.name}": 
+    ${JSON.stringify(product.reviews || ["No reviews found. Handle gracefully with default insight."])}.
+    
     Provide a final verdict (BUY, CONSIDER, or SKIP) based on quality, sentiment, and price ($${product.price}).
     
     Return ONLY JSON:
     {
       "verdict": "BUY",
-      "pros": ["good thing"],
-      "cons": ["bad thing"],
-      "sentimentScore": 85
+      "summary": "Consolidated opinion",
+      "pros": ["good trait"],
+      "cons": ["bad trait"],
+      "sentimentScore": 0-100
     }`;
 
     const response = await generateOllama({
