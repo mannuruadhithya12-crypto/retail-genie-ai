@@ -28,16 +28,32 @@ const moodColors: Record<Mood, string> = {
 
 export function MoodTranslator({ open, onOpenChange, onSelectMood }: MoodTranslatorProps) {
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [result, setResult] = useState<any>(null)
 
   const handleSelect = (mood: Mood) => {
     setSelectedMood(mood)
   }
 
-  const handleConfirm = () => {
-    if (selectedMood) {
-      onSelectMood(selectedMood)
-      onOpenChange(false)
-      setSelectedMood(null)
+  const handleConfirm = async () => {
+    if (!selectedMood) return
+    
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/ai/mood-outfit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mood: selectedMood, preferences: {} }),
+      })
+      const data = await response.json()
+      if (data.success) {
+        setResult(data)
+        onSelectMood(selectedMood)
+      }
+    } catch (error) {
+      console.error('Mood translation error:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -64,51 +80,75 @@ export function MoodTranslator({ open, onOpenChange, onSelectMood }: MoodTransla
             Select your mood and I will suggest outfits that match your energy
           </p>
 
-          <div className="grid grid-cols-2 gap-3">
-            {moodOptions.map((mood) => (
-              <motion.button
-                key={mood.value}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleSelect(mood.value as Mood)}
-                className={cn(
-                  'relative overflow-hidden rounded-xl p-4 text-left transition-all',
-                  'border-2',
-                  selectedMood === mood.value
-                    ? 'border-primary ring-2 ring-primary/20'
-                    : 'border-border hover:border-primary/50'
-                )}
-              >
-                <div
+          {!result ? (
+            <div className="grid grid-cols-2 gap-3">
+              {moodOptions.map((mood) => (
+                <motion.button
+                  key={mood.value}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSelect(mood.value as Mood)}
                   className={cn(
-                    'absolute inset-0 opacity-10 bg-gradient-to-br',
-                    moodColors[mood.value as Mood]
+                    'relative overflow-hidden rounded-xl p-4 text-left transition-all',
+                    'border-2',
+                    selectedMood === mood.value
+                      ? 'border-primary ring-2 ring-primary/20'
+                      : 'border-border hover:border-primary/50'
                   )}
-                />
-                <div className="relative">
-                  <p className="font-semibold">{mood.label}</p>
-                  <p className="text-sm text-muted-foreground">{mood.description}</p>
-                </div>
-              </motion.button>
-            ))}
-          </div>
+                >
+                  <div
+                    className={cn(
+                      'absolute inset-0 opacity-10 bg-gradient-to-br',
+                      moodColors[mood.value as Mood]
+                    )}
+                  />
+                  <div className="relative">
+                    <p className="font-semibold">{mood.label}</p>
+                    <p className="text-sm text-muted-foreground">{mood.description}</p>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                <p className="text-sm italic">"{result.advice}"</p>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {result.pieces?.map((piece: any, i: number) => (
+                  <div key={i} className="p-3 rounded-lg bg-card border border-border">
+                    <p className="font-medium text-sm text-primary">{piece.name}</p>
+                    <p className="text-xs text-muted-foreground">{piece.reason}</p>
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setResult(null)} className="w-full">
+                Try another mood
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            className="flex-1"
-            disabled={!selectedMood}
-            onClick={handleConfirm}
-          >
-            Get Outfit Suggestions
-          </Button>
+          {!result && (
+            <>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => onOpenChange(false)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={!selectedMood || isLoading}
+                onClick={handleConfirm}
+              >
+                {isLoading ? 'Translating Mood...' : 'Get Outfit Suggestions'}
+              </Button>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

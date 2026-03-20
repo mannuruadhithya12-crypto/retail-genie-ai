@@ -1,47 +1,41 @@
 import { NextResponse } from 'next/server';
-import { generateOllama } from '@/lib/ollama';
+import { chatOllama } from '@/lib/ollama';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { moodText } = await req.json();
+    const { mood, preferences } = await request.json();
 
-    if (!moodText) {
-      return NextResponse.json({ error: 'Mood description is required' }, { status: 400 });
-    }
-
-    const prompt = `You are an expert fashion stylist. A client says they feel: "${moodText}".
-    Analyze this emotion and recommend a complete outfit.
+    const prompt = `User mood: "${mood}". 
+    User preferences: ${JSON.stringify(preferences)}.
     
-    Return ONLY a JSON object:
+    TASK: Translate this mood into a high-fashion, specialized outfit recommendation.
+    Explain the psychology of the color palette and fabric choices.
+    
+    RETURN ONLY JSON:
     {
-      "emotionAnalysis": "short emotional style analysis",
-      "colors": ["#hex1", "#hex2"],
-      "style": "detailed style name",
-      "outfits": [
-        {
-          "name": "Outfit Name",
-          "items": ["item1", "item2"]
-        }
+      "advice": "Stylist reasoning string",
+      "styleTags": ["tag1", "tag2"],
+      "colorPalette": ["#hex1", "#hex2"],
+      "pieces": [
+        {"name": "Item Description", "reason": "Why this fits the mood"}
       ]
     }`;
 
-    const response = await generateOllama({
-      model: 'llama3',
-      prompt,
-      format: 'json'
-    });
+    const response = await chatOllama('llama3', [
+      { role: 'system', content: 'You are a luxury fashion mood translator.' },
+      { role: 'user', content: prompt }
+    ]);
 
     let data;
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       data = JSON.parse(jsonMatch ? jsonMatch[0] : response);
     } catch (e) {
-      console.error('Mood JSON Parse error:', response);
-      throw new Error('Malformed AI response');
+      data = { advice: response, styleTags: [], colorPalette: [], pieces: [] };
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ success: true, ...data });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

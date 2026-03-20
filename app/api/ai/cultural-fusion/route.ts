@@ -1,28 +1,36 @@
 import { NextResponse } from 'next/server';
-import { generateOllama } from '@/lib/ollama';
+import { chatOllama } from '@/lib/ollama';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { styles } = await req.json();
+    const { styles } = await request.json(); // Array of 2 styles, e.g., ["Japanese Minimalist", "Bohemian"]
 
-    const prompt = `Fuse these cultures: "${styles}". 
-    Design a hybrid outfit that blends both aesthetics.
+    const prompt = `Blend these two distinct fashion styles: ${styles.join(' and ')}.
+    Create a unique 'Fusion Look' that respects both heritages while being modern.
     
-    Return ONLY JSON:
+    RETURN ONLY JSON:
     {
-      "conceptName": "Name of the fusion",
-      "description": "stylist design notes",
-      "keyElements": ["element1", "element2"]
+      "lookName": "Fusion Name",
+      "description": "Exquisite description of the blend.",
+      "keyFeatures": ["detail1", "detail2"],
+      "stylingTips": ["tip1", "tip2"]
     }`;
 
-    const response = await generateOllama({
-      model: 'mistral',
-      prompt,
-      format: 'json'
-    });
+    const response = await chatOllama('llama3', [
+      { role: 'system', content: 'You are a global fashion fusion expert.' },
+      { role: 'user', content: prompt }
+    ]);
 
-    return NextResponse.json(JSON.parse(response));
+    let data;
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      data = JSON.parse(jsonMatch ? jsonMatch[0] : response);
+    } catch (e) {
+      data = { description: response, keyFeatures: [], stylingTips: [] };
+    }
+
+    return NextResponse.json({ success: true, ...data });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

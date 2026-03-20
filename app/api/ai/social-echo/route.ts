@@ -3,21 +3,21 @@ import { chatOllama } from '@/lib/ollama';
 
 export async function POST(request: Request) {
   try {
-    const { items, years = 10 } = await request.json();
+    const { style } = await request.json();
 
-    const prompt = `Simulate how this outfit will age over ${years} years: "${items.join(', ')}".
-    Predict fabric degradation, style relevance (timelessness), and color fading.
+    const prompt = `Analyze the "Social Echo" for the style: "${style}".
+    Simulate real-time sentiment from platforms like TikTok, Instagram, and Pinterest.
     
     RETURN ONLY JSON:
     {
-      "futureCondition": "Description of physical state in ${years}yr",
-      "styleRelevance": "High/Medium/Low",
-      "agingVerdict": "Will it be a vintage gem or landfill?",
-      "maintenanceTips": ["tip1", "tip2"]
+      "trendingScore": 95,
+      "sentiment": "Positive/Bullish",
+      "buzzwords": ["aesthetic", "trending", "must-have"],
+      "socialForecast": "Prediction for next 3 months"
     }`;
 
     const response = await chatOllama('llama3', [
-      { role: 'system', content: 'You are a textile expert and future style predictor.' },
+      { role: 'system', content: 'You are a social media trend analyst for premium fashion.' },
       { role: 'user', content: prompt }
     ]);
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       data = JSON.parse(jsonMatch ? jsonMatch[0] : response);
     } catch (e) {
-      data = { futureCondition: response, agingVerdict: "" };
+      data = { sentiment: response, buzzwords: [], socialForecast: "" };
     }
 
     return NextResponse.json({ success: true, ...data });
