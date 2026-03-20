@@ -1,35 +1,65 @@
 import { NextResponse } from 'next/server'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
-// Placeholder for Gemini API integration
-// Environment variable: GEMINI_API_KEY
+// Initialize the Gemini API client
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { message, context } = body
+    const { message, messages = [], preferences } = body
 
-    // TODO: Integrate with Gemini API
-    // const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${process.env.GEMINI_API_KEY}`,
-    //   },
-    //   body: JSON.stringify({
-    //     contents: [{ parts: [{ text: message }] }],
-    //   }),
-    // })
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json(
+        { message: 'GEMINI_API_KEY is not set. Please add it to your environment variables.' },
+        { status: 500 }
+      )
+    }
 
-    // For now, return a mock response
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+    const systemPrompt = `You are an elite, avant-garde fashion stylist for the premium luxury brand Retail-Genie.
+The user has the following preferences:
+- Style: ${preferences?.stylePreferences?.join(', ') || 'casual'}
+- Climate: ${preferences?.climate || 'temperate'}
+- Location: ${preferences?.location || 'unknown'}
+- Budget Currency: ${preferences?.currency || 'USD'}
+- Body Type: ${preferences?.bodyType || 'average'}
+- Skin Tone: ${preferences?.skinTone || 'medium'}
+- Shopping for: ${preferences?.shopFor || 'self'}
+
+CRITICAL INSTRUCTIONS:
+- Be highly sophisticated, poetic, and elevated in your tone (like a Vogue editor or a luxury personal shopper).
+- DO NOT use generic bullet points like "The Swimsuit", "The Cover-up". Avoid simple numerical lists.
+- Instead, use elegant markdown components: blockquotes, italicized styling, or thematic section headers (e.g., *The Silhouette*, *The Palette*, *The Finishes*).
+- Describe textures, silhouettes, and color harmony poetically and precisely. Your recommendations must feel "advanced" and highly curated.
+- Never give basic or boring advice. Push the boundaries while respecting the user's climate and body type.`
+
+    const formattedHistory = messages.map((m: any) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content || '' }],
+    }))
+
+    const chat = model.startChat({
+      history: [
+        { role: 'user', parts: [{ text: systemPrompt }] },
+        { role: 'model', parts: [{ text: 'Understood. I am your Retail-Genie stylist.' }] },
+        ...formattedHistory,
+      ],
+    })
+
+    const result = await chat.sendMessage(message)
+    const responseText = result.response.text()
+
     return NextResponse.json({
       success: true,
-      message: 'This is a placeholder response. Connect your GEMINI_API_KEY for real AI responses.',
+      message: responseText,
       products: [],
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Chat API error:', error)
     return NextResponse.json(
-      { error: 'Failed to process chat message' },
+      { error: error.message || 'Failed to process chat message' },
       { status: 500 }
     )
   }

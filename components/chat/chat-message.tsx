@@ -1,6 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Sparkles } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel'
@@ -53,14 +55,11 @@ export function ChatMessageComponent({
               : 'bg-card border border-border rounded-bl-md'
           )}
         >
-          <div
-            className="prose prose-sm dark:prose-invert max-w-none"
-            dangerouslySetInnerHTML={{
-              __html: message.content
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\n/g, '<br />'),
-            }}
-          />
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {message.content}
+            </ReactMarkdown>
+          </div>
         </div>
 
         {/* Product recommendations carousel */}

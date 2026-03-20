@@ -48,34 +48,6 @@ export function ChatArea({ onTryOn, onProductDetails }: ChatAreaProps) {
     saveOutfit(outfit)
   }
 
-  const simulateAIResponse = (userMessage: string): ChatMessage => {
-    // Simple keyword-based responses for demo
-    const lowerMessage = userMessage.toLowerCase()
-    let responseContent = ''
-    let products: Product[] = []
-
-    if (lowerMessage.includes('mood') || lowerMessage.includes('feel')) {
-      responseContent = aiResponses.moodResponse('confident')
-      products = mockProducts.slice(0, 3)
-    } else if (lowerMessage.includes('sustainable') || lowerMessage.includes('eco')) {
-      responseContent = aiResponses.sustainabilityInfo
-      products = mockProducts.filter((p) => (p.sustainabilityScore || 0) > 80)
-    } else if (lowerMessage.includes('try on') || lowerMessage.includes('virtual')) {
-      responseContent = aiResponses.tryOnIntro
-    } else {
-      responseContent = `Based on your preferences for **${preferences.stylePreferences.join(', ') || 'casual'}** styles and your **${preferences.climate || 'temperate'}** climate, here are some recommendations I think you'll love:`
-      products = mockProducts.slice(0, 4)
-    }
-
-    return {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: responseContent,
-      timestamp: new Date(),
-      products: products.length > 0 ? products : undefined,
-    }
-  }
-
   const handleSendMessage = async (content: string) => {
     let sessionId = currentSessionId
     if (!sessionId) {
@@ -89,21 +61,58 @@ export function ChatArea({ onTryOn, onProductDetails }: ChatAreaProps) {
       content,
       timestamp: new Date(),
     }
+    
+    // We get the current messages for history before adding the new one
+    const sessionHistory = chatSessions.find((s) => s.id === (sessionId || currentSessionId))?.messages || [];
+    
     addMessage(sessionId, userMessage)
 
-    // Simulate AI thinking
     setIsTyping(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500 + Math.random() * 1000))
-    setIsTyping(false)
+    
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content,
+          messages: sessionHistory,
+          preferences,
+        }),
+      })
 
-    // Add AI response
-    const aiMessage = simulateAIResponse(content)
-    addMessage(sessionId, aiMessage)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Failed to generate response')
+      }
+
+      const aiMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: data.message || 'Sorry, I could not generate a response.',
+        timestamp: new Date(),
+        products: data.products?.length > 0 ? data.products : undefined,
+      }
+      addMessage(sessionId, aiMessage)
+    } catch (error: any) {
+      console.error('Chat error:', error)
+      const errorMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `**Error:** ${error.message || 'Something went wrong.'}`,
+        timestamp: new Date(),
+      }
+      addMessage(sessionId, errorMessage)
+    } finally {
+      setIsTyping(false)
+    }
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden relative">
+      <ScrollArea className="flex-1 min-h-0 p-4" ref={scrollRef}>
         <div className="max-w-4xl mx-auto space-y-6">
           {messages.length === 0 ? (
             <div className="text-center py-12 space-y-4">
