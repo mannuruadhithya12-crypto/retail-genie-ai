@@ -27,7 +27,7 @@ export class FashionScraper {
       const $ = cheerio.load(data);
       const results: any[] = [];
 
-      $(selector).each((i, el) => {
+      $(selector).each((i: number, el: any) => {
         // Generic extraction logic, would be overridden by site-specific scrapers
         const product = {
           name: $(el).find('.product-name').text().trim(),
