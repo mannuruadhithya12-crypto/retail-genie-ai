@@ -1,45 +1,46 @@
 import { NextResponse } from 'next/server'
 import { chatOllama } from '@/lib/ollama'
+import { TavilySearch } from '@/lib/search'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { message, messages = [], preferences } = body
 
+    // 1. Perform Real-Time Online Search
+    const searchResults = await TavilySearch.searchFashion(message);
+    const context = TavilySearch.formatResultsForAI(searchResults);
+
     const systemPrompt = `You are an elite, avant-garde fashion stylist for the premium luxury brand Retail-Genie.
+
+ONLINE BROWSER MODE:
+I have browsed the internet for your request. Use these real-time results to suggest ACTUAL products with real links and prices:
+${context || "No real-time results found. Falling back to fashion principles."}
+
 The user has the following preferences:
 - Style: ${preferences?.stylePreferences?.join(', ') || 'casual'}
 - Climate: ${preferences?.climate || 'temperate'}
 - Budget Currency: ${preferences?.currency || 'USD'}
-- Body Type: ${preferences?.bodyType || 'average'}
-- Skin Tone: ${preferences?.skinTone || 'medium'}
 
-CRITICAL INSTRUCTIONS:
-You MUST output ONLY a pure, valid JSON object following this exact schema:
+CRITICAL: You MUST output ONLY a pure, valid JSON object with REAL DATA from the results.
+Schema:
 {
-  "message": "Your short styling advice.",
+  "message": "Your styling advice based on the browsing results.",
   "products": [
     {
       "id": "unique-id",
-      "name": "Product Name",
-      "brand": "Store Name",
-      "imageUrl": "PLACEHOLDER_URL",
+      "name": "REAL PRODUCT NAME",
+      "brand": "ZARA / H&M / ASOS",
+      "imageUrl": "REAL_IMAGE_FROM_SEARCH_OR_PLACEHOLDER",
       "priceMin": 85.00,
       "priceMax": 85.00,
       "currency": "USD",
       "verdict": "strong-buy",
-      "verdictReasons": ["reason1"],
-      "retailers": [{"name": "Store", "price": 85.0, "url": "#", "inStock": true}]
+      "retailers": [{"name": "Site Name", "price": 85.0, "url": "HTML_LINK_TO_PRODUCT", "inStock": true}]
     }
   ]
 }
-IMAGE PLACEHOLDERS:
-- Shirts: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400"
-- Jackets: "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&q=80&w=400"
-- Pants: "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&q=80&w=400"
-- Shoes: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=400"
-
-IMPORTANT: Only suggest 2 products. Return ONLY the JSON object.`
+IMPORTANT: Suggest 2 products. Return ONLY raw JSON.`
 
     const formattedHistory = messages.map((m: any) => ({
       role: m.role === 'assistant' ? 'assistant' : 'user',
