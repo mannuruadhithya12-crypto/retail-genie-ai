@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     
     const userContext = JSON.stringify({ recentOutfits, recentHistory });
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
     
     const prompt = `Act as a "Future Style Predictor". 
     Based on this user's history: ${userContext}.
