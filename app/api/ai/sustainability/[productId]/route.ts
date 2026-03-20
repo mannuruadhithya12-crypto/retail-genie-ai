@@ -16,7 +16,7 @@ export async function GET(req: Request, { params }: { params: { productId: strin
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
     
     const prompt = `Act as a "Sustainability Fashion Expert". 
     Analyze this product: ${JSON.stringify(item)}.

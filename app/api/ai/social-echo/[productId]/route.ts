@@ -7,7 +7,7 @@ export async function GET(req: Request, { params }: { params: { productId: strin
   try {
     const { productId } = params;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
     
     const prompt = `Act as a "Social Sentiment Fashion Critic". 
     Fetch simulated public sentiment for product ID: "${productId}".
