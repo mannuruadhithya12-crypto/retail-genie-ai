@@ -58,13 +58,18 @@ IMPORTANT: Only suggest 2 products. Return ONLY the JSON object.`
     try {
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        replyData = JSON.parse(jsonMatch[0]);
+        const cleanedJson = jsonMatch[0].replace(/\\/g, '\\\\').replace(/\n/g, '\\n'); // Basic escapings
+        replyData = JSON.parse(jsonMatch[0]); 
       } else {
         throw new Error('No JSON object found in Ollama response.');
       }
     } catch (error: any) {
       console.error('JSON Parse error:', responseText);
-      throw new Error('AI returned malformed data. Please try again.');
+      // Fallback if parsing fails but we have text
+      replyData = {
+        message: responseText.slice(0, 500),
+        products: []
+      };
     }
 
     return NextResponse.json({
