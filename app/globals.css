@@ -132,6 +132,88 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    background: radial-gradient(circle at 50% -20%, #1c2025 0%, #0c0e12 100%);
+    @apply text-foreground min-h-screen;
+  }
+}
+
+@layer utilities {
+  .text-gradient-primary {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary;
+  }
+  .glass-morphism {
+    background: rgba(23, 26, 30, 0.6);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+  }
+
+  .gradient-border-trace {
+    position: relative;
+  }
+
+  .gradient-border-trace::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(135deg, #5f9eff, transparent);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  .liquid-light-btn {
+    background: linear-gradient(135deg, #db90ff, #cb66fe);
+  }
+
+  @keyframes pulse-ai {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .5; }
+  }
+
+  .animate-pulse-ai {
+    animation: pulse-ai 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .glow-border {
+    border: 1.5px solid transparent;
+    background-image: linear-gradient(#0c0e12, #0c0e12), linear-gradient(135deg, #5f9eff, transparent);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
+  }
+
+  .glass-panel {
+    background: rgba(23, 26, 30, 0.6);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+  }
+
+  .scan-line {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #5f9eff, transparent);
+    position: absolute;
+    width: 100%;
+    top: 50%;
+    box-shadow: 0 0 15px #5f9eff;
+    animation: scan 3s ease-in-out infinite;
+  }
+
+  @keyframes scan {
+    0%, 100% { top: 10%; opacity: 0; }
+    50% { top: 90%; opacity: 0.8; }
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .tonal-transition-glass {
+    background: linear-gradient(to bottom, rgba(12, 14, 18, 0.8), rgba(12, 14, 18, 0.4));
   }
 }

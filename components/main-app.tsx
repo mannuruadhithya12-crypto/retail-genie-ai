@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Header } from './header'
 import { ChatSidebar } from './chat/chat-sidebar'
+import { Button } from './ui/button'
 import { ChatArea } from './chat/chat-area'
 import { TryOnModal } from './try-on/try-on-modal'
 import { ProductDetailsModal } from './product-details-modal'
@@ -19,15 +20,18 @@ import { SavedOutfitsView } from './views/saved-outfits-view'
 import { HistoryView } from './views/history-view'
 import { PreferencesView } from './views/preferences-view'
 import { AILabView } from './views/ai-lab-view'
+import { DashboardView } from './views/dashboard-view'
+import { AtelierView } from './views/atelier-view'
 import { useAppStore } from '@/lib/store'
-import type { Product, TryOnResult, Mood, SavedOutfit } from '@/lib/types'
+import { Product, TryOnResult, Mood, SavedOutfit } from '@/lib/types'
+import { Plus, Mic, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { mockProducts } from '@/lib/mock-data'
 
-type ViewType = 'chat' | 'outfits' | 'history' | 'preferences' | 'ai-lab'
+type ViewType = 'dashboard' | 'chat' | 'outfits' | 'history' | 'preferences' | 'ai-lab' | 'atelier'
 
 export function MainApp() {
-  const [currentView, setCurrentView] = useState<ViewType>('chat')
+  const [currentView, setCurrentView] = useState<ViewType>('dashboard')
   const [tryOnProduct, setTryOnProduct] = useState<Product | null>(null)
   const [detailsProduct, setDetailsProduct] = useState<Product | null>(null)
   const [showMoodTranslator, setShowMoodTranslator] = useState(false)
@@ -315,6 +319,10 @@ export function MainApp() {
         return <PreferencesView />
       case 'ai-lab':
         return <AILabView onFeatureClick={handleAILabFeature} />
+      case 'atelier':
+        return <AtelierView />
+      case 'dashboard':
+        return <DashboardView onStartStyling={() => setCurrentView('chat')} onTryVirtualOutfit={() => setCurrentView('atelier')} />
       case 'chat':
       default:
         return (
@@ -335,15 +343,39 @@ export function MainApp() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
-      <Header />
+    <div className="flex h-screen overflow-hidden bg-transparent">
+      <ChatSidebar onNavigate={setCurrentView} currentView={currentView} />
       
-      <div className="flex flex-1 overflow-hidden">
-        <ChatSidebar onNavigate={setCurrentView} currentView={currentView} />
+      <div className="flex flex-1 flex-col overflow-hidden ml-80 h-full">
+        <Header onNavigate={setCurrentView} currentView={currentView} />
         
-        <main className="relative flex-1 flex flex-col overflow-hidden">
+        <main className="relative flex-1 overflow-y-auto pt-20 pb-32 px-12">
           {renderContent()}
         </main>
+
+        {/* Floating Chat Input Bar */}
+        <footer className="fixed bottom-8 left-80 right-8 z-50">
+          <div className="max-w-4xl mx-auto glass-morphism rounded-full p-2 border border-white/10 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="w-10 h-10 rounded-full text-slate-400 hover:text-white transition-colors">
+                <Plus className="h-5 w-5" />
+              </Button>
+              <input 
+                className="flex-1 bg-transparent border-none focus:ring-0 text-white text-sm py-3 px-2 placeholder:text-slate-500" 
+                placeholder="Ask your AI Stylist: 'What should I wear to a tech gala in Tokyo?'"
+                type="text"
+              />
+              <div className="flex items-center gap-2 pr-2">
+                <Button variant="ghost" size="icon" className="w-10 h-10 rounded-full text-slate-400 hover:text-white transition-colors">
+                  <Mic className="h-5 w-5" />
+                </Button>
+                <Button className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-lg shadow-primary/20 hover:scale-105 transition-transform p-0">
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
 
       {/* Modals */}

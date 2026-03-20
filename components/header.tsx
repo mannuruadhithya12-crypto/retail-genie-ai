@@ -1,54 +1,74 @@
-'use client'
-
-import { Moon, Sun, Menu, Sparkles } from 'lucide-react'
+import { Moon, Sun, Search, Bell, Sparkles } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useAppStore } from '@/lib/store'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 
-export function Header() {
+interface HeaderProps {
+  onNavigate?: (view: any) => void
+  currentView?: string
+}
+
+export function Header({ onNavigate, currentView }: HeaderProps) {
   const { theme, setTheme } = useTheme()
-  const { setSidebarOpen, sidebarOpen } = useAppStore()
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-4 md:px-6">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label="Toggle sidebar"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-semibold tracking-tight">
-              Retail-Genie
-            </span>
-          </div>
+    <header className="fixed top-0 right-0 z-40 flex h-20 w-[calc(100%-20rem)] items-center justify-between px-12 bg-transparent">
+      {/* Centered Navigation */}
+      <nav className="flex items-center gap-10 font-headline uppercase text-[10px] tracking-[0.2em] font-bold">
+        <button 
+          onClick={() => onNavigate?.('dashboard')}
+          className={cn(
+            "pb-1 transition-colors hover:text-white",
+            currentView === 'dashboard' ? "text-secondary border-b border-secondary" : "text-slate-500"
+          )}
+        >
+          Trends
+        </button>
+        <button 
+          onClick={() => onNavigate?.('outfits')}
+          className={cn(
+            "pb-1 transition-colors hover:text-white",
+            currentView === 'outfits' ? "text-secondary border-b border-secondary" : "text-slate-500"
+          )}
+        >
+          Collections
+        </button>
+        <button 
+          onClick={() => onNavigate?.('atelier')}
+          className={cn(
+            "pb-1 transition-colors hover:text-white",
+            currentView === 'atelier' ? "text-secondary border-b border-secondary" : "text-slate-500"
+          )}
+        >
+          Atelier
+        </button>
+      </nav>
+
+      {/* Search and Profile */}
+      <div className="flex items-center gap-8">
+        <div className="relative group hidden lg:block">
+          <Input 
+            className="w-64 h-10 pl-10 pr-4 rounded-full bg-white/5 border-white/10 focus:border-secondary transition-all duration-300 text-xs text-white placeholder:text-slate-500 focus:ring-0"
+            placeholder="Search Style Library..."
+          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-secondary transition-colors" />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            aria-label="Toggle theme"
-          >
-            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white transition-colors w-10 h-10 rounded-full">
+            <Bell className="h-5 w-5" />
           </Button>
-          <Avatar className="h-9 w-9 cursor-pointer">
-            <AvatarImage src="" alt="User" />
-            <AvatarFallback className="bg-primary/10 text-primary">
-              U
-            </AvatarFallback>
-          </Avatar>
+          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white transition-colors w-10 h-10 rounded-full">
+            <Sparkles className="h-5 w-5" />
+          </Button>
+          <div className="w-9 h-9 rounded-full border border-primary/40 p-0.5 ml-2">
+            <Avatar className="h-full w-full">
+              <AvatarImage src="" />
+              <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">U</AvatarFallback>
+            </Avatar>
+          </div>
         </div>
       </div>
     </header>

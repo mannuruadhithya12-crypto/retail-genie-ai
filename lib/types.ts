@@ -48,6 +48,8 @@ export interface Product {
   durabilityWashes?: number
   reviewSentiment?: string
   retailers: Retailer[]
+  isNew?: boolean
+  price?: number
 }
 
 export interface Retailer {
