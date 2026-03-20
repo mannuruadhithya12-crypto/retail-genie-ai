@@ -9,16 +9,22 @@ import { ProductDetailsModal } from './product-details-modal'
 import { MoodTranslator } from './features/mood-translator'
 import { CalendarAgent } from './features/calendar-agent'
 import { CulturalFusion } from './features/cultural-fusion'
+import { AgingSimulator } from './features/aging-simulator'
+import { LocationOverlay } from './features/location-overlay'
+import { GroupOutfit } from './features/group-outfit'
+import { VoiceStylist } from './features/voice-stylist'
+import { FutureStyle } from './features/future-style'
 import { FeatureButtons } from './features/feature-buttons'
 import { SavedOutfitsView } from './views/saved-outfits-view'
 import { HistoryView } from './views/history-view'
 import { PreferencesView } from './views/preferences-view'
+import { AILabView } from './views/ai-lab-view'
 import { useAppStore } from '@/lib/store'
 import type { Product, TryOnResult, Mood, SavedOutfit } from '@/lib/types'
 import { toast } from 'sonner'
 import { mockProducts } from '@/lib/mock-data'
 
-type ViewType = 'chat' | 'outfits' | 'history' | 'preferences'
+type ViewType = 'chat' | 'outfits' | 'history' | 'preferences' | 'ai-lab'
 
 export function MainApp() {
   const [currentView, setCurrentView] = useState<ViewType>('chat')
@@ -27,6 +33,12 @@ export function MainApp() {
   const [showMoodTranslator, setShowMoodTranslator] = useState(false)
   const [showCalendarAgent, setShowCalendarAgent] = useState(false)
   const [showCulturalFusion, setShowCulturalFusion] = useState(false)
+  const [showAgingSimulator, setShowAgingSimulator] = useState(false)
+  const [showLocationOverlay, setShowLocationOverlay] = useState(false)
+  const [showGroupOutfit, setShowGroupOutfit] = useState(false)
+  const [showVoiceStylist, setShowVoiceStylist] = useState(false)
+  const [showFutureStyle, setShowFutureStyle] = useState(false)
+  const [agingProduct, setAgingProduct] = useState<Product | null>(null)
 
   const { setCurrentSession, saveOutfit, addMessage, currentSessionId, createNewSession } = useAppStore()
 
@@ -146,6 +158,122 @@ export function MainApp() {
     setCurrentView('chat')
   }
 
+  const handleVoiceTranscript = (text: string) => {
+    let sessionId = currentSessionId
+    if (!sessionId) {
+      sessionId = createNewSession()
+    }
+
+    addMessage(sessionId, {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: text,
+      timestamp: new Date(),
+    })
+
+    setTimeout(() => {
+      addMessage(sessionId!, {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `I heard you! Here are some outfit recommendations based on your request: "${text}"`,
+        timestamp: new Date(),
+        products: mockProducts.slice(0, 4),
+      })
+    }, 1500)
+
+    setCurrentView('chat')
+  }
+
+  const handleGroupOutfits = (products: Product[]) => {
+    let sessionId = currentSessionId
+    if (!sessionId) {
+      sessionId = createNewSession()
+    }
+
+    addMessage(sessionId, {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: 'Show me coordinated group outfits',
+      timestamp: new Date(),
+    })
+
+    setTimeout(() => {
+      addMessage(sessionId!, {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: 'Here are coordinated outfit suggestions for your group! These pieces complement each other perfectly.',
+        timestamp: new Date(),
+        products,
+      })
+    }, 1500)
+
+    setCurrentView('chat')
+  }
+
+  const handleFutureStyleProducts = (products: Product[]) => {
+    let sessionId = currentSessionId
+    if (!sessionId) {
+      sessionId = createNewSession()
+    }
+
+    addMessage(sessionId, {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: 'Show me future-proof wardrobe investments',
+      timestamp: new Date(),
+    })
+
+    setTimeout(() => {
+      addMessage(sessionId!, {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: 'Based on your evolving style, here are investment pieces that will remain relevant as your fashion sense develops:',
+        timestamp: new Date(),
+        products,
+      })
+    }, 1500)
+
+    setCurrentView('chat')
+  }
+
+  const handleAILabFeature = (feature: string) => {
+    switch (feature) {
+      case 'mood':
+        setShowMoodTranslator(true)
+        break
+      case 'aging':
+        setAgingProduct(mockProducts[0])
+        setShowAgingSimulator(true)
+        break
+      case 'group':
+        setShowGroupOutfit(true)
+        break
+      case 'cultural':
+        setShowCulturalFusion(true)
+        break
+      case 'voice':
+        setShowVoiceStylist(true)
+        break
+      case 'future':
+        setShowFutureStyle(true)
+        break
+      case 'calendar':
+        setShowCalendarAgent(true)
+        break
+      case 'location':
+        setShowLocationOverlay(true)
+        break
+      case 'sustainability':
+        handleSustainabilityFocus()
+        break
+      case 'social':
+        toast.info('Social Echo is available on product detail pages!')
+        break
+      default:
+        break
+    }
+  }
+
   const handleSustainabilityFocus = () => {
     let sessionId = currentSessionId
     if (!sessionId) {
@@ -185,6 +313,8 @@ export function MainApp() {
         return <HistoryView onSelectSession={handleSelectSession} />
       case 'preferences':
         return <PreferencesView />
+      case 'ai-lab':
+        return <AILabView onFeatureClick={handleAILabFeature} />
       case 'chat':
       default:
         return (
@@ -248,6 +378,36 @@ export function MainApp() {
         open={showCulturalFusion}
         onOpenChange={setShowCulturalFusion}
         onGenerate={handleCulturalFusion}
+      />
+
+      <AgingSimulator
+        open={showAgingSimulator}
+        onOpenChange={setShowAgingSimulator}
+        imageUrl={agingProduct?.imageUrl || ''}
+        productName={agingProduct?.name || ''}
+      />
+
+      <LocationOverlay
+        open={showLocationOverlay}
+        onOpenChange={setShowLocationOverlay}
+      />
+
+      <GroupOutfit
+        open={showGroupOutfit}
+        onOpenChange={setShowGroupOutfit}
+        onAddToChat={handleGroupOutfits}
+      />
+
+      <VoiceStylist
+        open={showVoiceStylist}
+        onOpenChange={setShowVoiceStylist}
+        onTranscript={handleVoiceTranscript}
+      />
+
+      <FutureStyle
+        open={showFutureStyle}
+        onOpenChange={setShowFutureStyle}
+        onAddToChat={handleFutureStyleProducts}
       />
     </div>
   )

@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { X, Sparkles, Heart, ExternalLink, Leaf, Droplets, Star, ThumbsUp } from 'lucide-react'
+import { X, Sparkles, Heart, ExternalLink, Leaf, Droplets, Star, ThumbsUp, Clock, MessageCircle } from 'lucide-react'
+import { SocialEcho } from './features/social-echo'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -142,6 +143,9 @@ export function ProductDetailsModal({
                   </div>
                 </div>
               )}
+
+              {/* Social Echo */}
+              <SocialEcho product={product} />
 
               {/* Review Sentiment */}
               {product.reviewSentiment && (

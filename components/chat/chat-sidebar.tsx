@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, MessageSquare, Heart, History, Settings, Trash2, ChevronLeft } from 'lucide-react'
+import { Plus, MessageSquare, Heart, History, Settings, Trash2, ChevronLeft, Sparkles, Beaker } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -20,7 +20,7 @@ import { useAppStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 
 interface ChatSidebarProps {
-  onNavigate: (view: 'chat' | 'outfits' | 'history' | 'preferences') => void
+  onNavigate: (view: 'chat' | 'outfits' | 'history' | 'preferences' | 'ai-lab') => void
   currentView: string
 }
 
@@ -102,6 +102,15 @@ export function ChatSidebar({ onNavigate, currentView }: ChatSidebarProps) {
         >
           <Settings className="h-4 w-4" />
           Preferences
+        </Button>
+        <Button
+          variant={currentView === 'ai-lab' ? 'secondary' : 'ghost'}
+          className="w-full justify-start gap-2 bg-gradient-to-r from-primary/10 to-accent/10 hover:from-primary/20 hover:to-accent/20"
+          onClick={() => onNavigate('ai-lab')}
+        >
+          <Beaker className="h-4 w-4 text-primary" />
+          AI Features Lab
+          <Sparkles className="h-3 w-3 ml-auto text-accent" />
         </Button>
       </div>
 
