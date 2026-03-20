@@ -89,11 +89,11 @@ export function ChatArea({ onTryOn, onProductDetails }: ChatAreaProps) {
       }
 
       const aiMessage: ChatMessage = {
-        id: crypto.randomUUID(),
+        id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.message || 'Sorry, I could not generate a response.',
+        content: data.message,
+        products: data.products, // Ensure products are passed here
         timestamp: new Date(),
-        products: data.products?.length > 0 ? data.products : undefined,
       }
       addMessage(sessionId, aiMessage)
     } catch (error: any) {
