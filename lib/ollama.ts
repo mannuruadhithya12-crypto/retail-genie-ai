@@ -6,11 +6,26 @@ export interface OllamaOptions {
   format?: 'json';
 }
 
+const OLLAMA_BASE_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+
+export async function generateEmbedding(prompt: string) {
+  try {
+    const response = await axios.post(`${OLLAMA_BASE_URL}/api/embeddings`, {
+      model: 'nomic-embed-text',
+      prompt
+    });
+    return (response.data as any).embedding;
+  } catch (error) {
+    console.error('Ollama Embedding error:', error);
+    return new Array(768).fill(0); // Fallback
+  }
+}
+
 export async function generateOllama(options: OllamaOptions) {
-  const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434/api/generate';
+  const OLLAMA_GENERATE_URL = `${OLLAMA_BASE_URL}/api/generate`;
   
   try {
-    const response = await fetch(OLLAMA_URL, {
+    const response = await fetch(OLLAMA_GENERATE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

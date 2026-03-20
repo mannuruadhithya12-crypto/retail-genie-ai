@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Header } from './header'
 import { ChatSidebar } from './chat/chat-sidebar'
 import { Button } from './ui/button'
@@ -52,6 +52,23 @@ export function MainApp() {
   const handleProductDetails = (product: Product) => {
     setDetailsProduct(product)
   }
+
+  const [products, setProducts] = useState<Product[]>([])
+  
+  useEffect(() => {
+    const fetchInitialProducts = async () => {
+      try {
+        const response = await fetch('/api/products/search');
+        const data = await response.json();
+        if (data.success && data.products) {
+          setProducts(data.products);
+        }
+      } catch (error) {
+        console.error('Initial product fetch failed:', error);
+      }
+    };
+    fetchInitialProducts();
+  }, []);
 
   const handleSaveTryOnResult = (result: TryOnResult) => {
     if (tryOnProduct) {

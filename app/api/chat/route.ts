@@ -6,17 +6,17 @@ import { ProductExtractor } from '@/lib/extractor'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { message, messages = [], preferences } = body
+    const { query, messages = [], preferences } = body
 
-    // 1. Initial Discovery Search
-    const searchResults = await TavilySearch.searchFashion(message);
+    // 1. Semantic search for relevant products in our DB
+    const dbProducts = await ClothingService.getProducts(query, 5);
     
-    // 2. Deep Extraction for Top 2 Results (Sequential for stability)
+    // 2. Deep Extraction for Top 2 Results from Web (for "Live" feel)
     const deepResults = [];
-    for (const res of searchResults.slice(0, 2)) {
+    const webResults = await TavilySearch.searchFashion(query);
+    for (const res of webResults.slice(0, 2)) {
       console.log(`Deep extracting: ${res.url}`);
       const deepData = await ProductExtractor.deepExtract(res.url);
-      
       const finaleImage = deepData.imageUrl || res.images?.[0] || 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400';
       
       deepResults.push({
@@ -29,9 +29,11 @@ export async function POST(request: Request) {
       console.log(`Extracted Image: ${finaleImage}`);
     }
 
-    const context = deepResults.map(r => 
-      `Product: ${r.title}\nURL: ${r.url}\nImage: ${r.imageUrl}\nPrice: ${r.price}\nSnippet: ${r.snippet}`
-    ).join('\n---\n');
+    // 3. Combine DB and Web products for the Stylist context
+    const context = [
+      ...dbProducts.map(p => `[DB PRODUCT] Name: ${p.name}, Price: ${p.priceMin}, Tags: ${p.verdictReasons.join(', ')}`),
+      ...deepResults.map(r => `[WEB PRODUCT] Name: ${r.title}, Price: ${r.price}, URL: ${r.url}, Image: ${r.imageUrl}`)
+    ].join('\n');
 
     // 3. AI Synthesis - Use the deep-extracted context
     const systemPrompt = `You are a real-time fashion personal shopper for Retail-Genie.
