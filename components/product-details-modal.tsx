@@ -34,13 +34,47 @@ const verdictConfig = {
   },
 }
 
+import { useEffect, useState } from 'react'
+
 export function ProductDetailsModal({
   open,
   onOpenChange,
-  product,
+  product: initialProduct,
   onTryOn,
   onSave,
 }: ProductDetailsModalProps) {
+  const [product, setProduct] = useState<Product | null>(initialProduct)
+  const [isSustainabilityLoading, setIsSustainabilityLoading] = useState(false)
+
+  useEffect(() => {
+    setProduct(initialProduct)
+  }, [initialProduct])
+
+  useEffect(() => {
+    if (open && product && !product.sustainabilityScore) {
+      const fetchSustainability = async () => {
+        setIsSustainabilityLoading(true)
+        try {
+          const response = await fetch(`/api/ai/sustainability/${product.id}`)
+          const data = await response.json()
+          if (response.ok) {
+            setProduct(prev => prev ? {
+              ...prev,
+              sustainabilityScore: data.ecoScore,
+              co2Estimate: data.co2Estimate,
+              durabilityWashes: data.durabilityWashes
+            } : null)
+          }
+        } catch (error) {
+          console.error('Sustainability AI Error:', error)
+        } finally {
+          setIsSustainabilityLoading(false)
+        }
+      }
+      fetchSustainability()
+    }
+  }, [open, product?.id])
+
   if (!product) return null
 
   const verdict = verdictConfig[product.verdict]

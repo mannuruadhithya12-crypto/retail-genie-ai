@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { toast } from 'sonner'
 
 interface AgingSimulatorProps {
   open: boolean
@@ -41,31 +42,38 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
 
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 95) {
-          clearInterval(interval)
-          return 95
-        }
-        return prev + Math.random() * 20
+        if (prev >= 90) return 90;
+        return prev + 10;
       })
-    }, 300)
+    }, 200)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2500))
+    try {
+      const response = await fetch('/api/ai/outfit-aging', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageUrl, timeframe: optionId })
+      });
+      
+      const data = await response.json();
+      
+      clearInterval(interval);
+      setProgress(100);
 
-    clearInterval(interval)
-    setProgress(100)
-
-    const option = agingOptions.find((o) => o.id === optionId)
-    const months = option?.months || 6
-
-    setAgingDetails({
-      colorFading: Math.min(15 + months * 2, 40),
-      fabricWear: Math.min(10 + months * 1.5, 35),
-      pillingLevel: Math.min(5 + months * 2.5, 50),
-    })
-
-    setAgedImage(imageUrl)
-    setIsProcessing(false)
+      if (response.ok) {
+        setAgingDetails({
+          colorFading: Math.round(data.durabilityScore / 3),
+          fabricWear: Math.round((100 - data.durabilityScore) / 2),
+          pillingLevel: Math.round((100 - data.durabilityScore) / 1.5),
+        })
+        setAgedImage(imageUrl) // Still use original for visual filter simulation
+        toast.success('Simulation complete!')
+      }
+    } catch (error) {
+      console.error('Aging AI Error:', error);
+      toast.error('Simulation failed.');
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   const handleReset = () => {

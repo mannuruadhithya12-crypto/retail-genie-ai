@@ -131,35 +131,56 @@ export function MainApp() {
     }
   }
 
-  const handleCalendarOutfits = (events: { id: string; date: Date; title: string }[]) => {
+  const handleCalendarOutfits = async (events: { id: string; date: Date; title: string }[]) => {
     let sessionId = currentSessionId
     if (!sessionId) {
       sessionId = createNewSession()
     }
 
-    const eventList = events.map((e) => e.title).join(', ')
-    
     addMessage(sessionId, {
       id: crypto.randomUUID(),
       role: 'user',
-      content: `Help me plan outfits for these upcoming events: ${eventList}`,
+      content: `Help me plan outfits for these upcoming events: ${events.map(e => e.title).join(', ')}`,
       timestamp: new Date(),
     })
 
-    setTimeout(() => {
-      addMessage(sessionId!, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `I'll help you plan outfits for your ${events.length} upcoming event${events.length !== 1 ? 's' : ''}! Here are some versatile pieces that work across multiple occasions:`,
-        timestamp: new Date(),
-        products: mockProducts.slice(0, 4),
-      })
-    }, 1500)
-
     setCurrentView('chat')
+
+    try {
+      const response = await fetch('/api/ai/calendar-outfit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ events })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        addMessage(sessionId!, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `${data.itinerarySuggestion}\n\n**Event-Specific Outfits:**`,
+          timestamp: new Date(),
+          products: data.dailyOutfits.map((o: any) => ({
+            id: crypto.randomUUID(),
+            name: o.outfitName,
+            brand: 'Calendar Stylist',
+            imageUrl: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=400',
+            priceMin: 50,
+            priceMax: 200,
+            currency: 'USD',
+            verdict: 'strong-buy',
+            verdictReasons: [o.reasoning],
+            retailers: []
+          }))
+        })
+      }
+    } catch (error) {
+      console.error('Calendar AI Error:', error);
+    }
   }
 
-  const handleCulturalFusion = (cultures: string[]) => {
+  const handleCulturalFusion = async (cultures: string[]) => {
     let sessionId = currentSessionId
     if (!sessionId) {
       sessionId = createNewSession()
@@ -172,20 +193,44 @@ export function MainApp() {
       timestamp: new Date(),
     })
 
-    setTimeout(() => {
-      addMessage(sessionId!, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `What an exciting fusion concept! Combining **${cultures.join('** and **')}** fashion creates a unique aesthetic. Here are some pieces that blend these cultural influences beautifully:`,
-        timestamp: new Date(),
-        products: mockProducts.slice(1, 5),
-      })
-    }, 1500)
-
     setCurrentView('chat')
+
+    try {
+      const response = await fetch('/api/ai/cultural-fusion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ styles: cultures.join(' + ') })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        addMessage(sessionId!, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `**${data.fusionName}**\n\n${data.outfitDescription}\n\n**Key Elements:**\n${data.keyElements.map((e: string) => `• ${e}`).join('\n')}`,
+          timestamp: new Date(),
+          products: [{
+            id: crypto.randomUUID(),
+            name: data.fusionName,
+            brand: 'Cultural Fusion',
+            imageUrl: 'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&q=80&w=400',
+            priceMin: 89,
+            priceMax: 299,
+            currency: 'USD',
+            verdict: 'strong-buy',
+            verdictReasons: data.keyElements,
+            retailers: []
+          }]
+        })
+      }
+    } catch (error) {
+      console.error('Fusion AI Error:', error);
+      toast.error('Fusion generation failed.');
+    }
   }
 
-  const handleVoiceTranscript = (text: string) => {
+  const handleVoiceTranscript = async (text: string) => {
     let sessionId = currentSessionId
     if (!sessionId) {
       sessionId = createNewSession()
@@ -198,20 +243,32 @@ export function MainApp() {
       timestamp: new Date(),
     })
 
-    setTimeout(() => {
-      addMessage(sessionId!, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `I heard you! Here are some outfit recommendations based on your request: "${text}"`,
-        timestamp: new Date(),
-        products: mockProducts.slice(0, 4),
-      })
-    }, 1500)
-
     setCurrentView('chat')
+
+    try {
+      const response = await fetch('/api/ai/voice-style', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript: text, userId: 'default-user' })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        addMessage(sessionId!, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: data.voiceResponse,
+          timestamp: new Date(),
+          products: mockProducts.slice(0, 2) // Fallback for voice recommendations
+        })
+      }
+    } catch (error) {
+      console.error('Voice AI Error:', error);
+    }
   }
 
-  const handleGroupOutfits = (products: Product[]) => {
+  const handleGroupOutfits = async (products: Product[]) => {
     let sessionId = currentSessionId
     if (!sessionId) {
       sessionId = createNewSession()
@@ -224,7 +281,29 @@ export function MainApp() {
       timestamp: new Date(),
     })
 
-    setTimeout(() => {
+    setCurrentView('chat')
+
+    try {
+      // We use the first person's image as a base for coordination logic if available
+      const response = await fetch('/api/ai/group-outfit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: [products[0]?.imageUrl] })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        addMessage(sessionId!, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `**Group Theme: ${data.themeName}**\n\n${data.coordinationLogic}`,
+          timestamp: new Date(),
+          products: products // Keep the selected products but the AI provides the logic
+        })
+      }
+    } catch (error) {
+      console.error('Group AI Error:', error);
       addMessage(sessionId!, {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -232,12 +311,10 @@ export function MainApp() {
         timestamp: new Date(),
         products,
       })
-    }, 1500)
-
-    setCurrentView('chat')
+    }
   }
 
-  const handleFutureStyleProducts = (products: Product[]) => {
+  const handleFutureStyleProducts = async (products: Product[]) => {
     let sessionId = currentSessionId
     if (!sessionId) {
       sessionId = createNewSession()
@@ -250,17 +327,40 @@ export function MainApp() {
       timestamp: new Date(),
     })
 
-    setTimeout(() => {
-      addMessage(sessionId!, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: 'Based on your evolving style, here are investment pieces that will remain relevant as your fashion sense develops:',
-        timestamp: new Date(),
-        products,
-      })
-    }, 1500)
-
     setCurrentView('chat')
+
+    try {
+      const response = await fetch('/api/ai/style-predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'default-user' })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        addMessage(sessionId!, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `**Trend Forecast:** ${data.trendForecast}\n\n${data.evolutionReasoning}`,
+          timestamp: new Date(),
+          products: data.investmentPieces.map((p: any) => ({
+            id: crypto.randomUUID(),
+            name: p.item,
+            brand: 'Future Investment',
+            imageUrl: 'https://images.unsplash.com/photo-1591047139829-d91aec36beea?auto=format&fit=crop&q=80&w=400',
+            priceMin: 150,
+            priceMax: 500,
+            currency: 'USD',
+            verdict: 'strong-buy',
+            verdictReasons: [p.reason],
+            retailers: []
+          }))
+        })
+      }
+    } catch (error) {
+      console.error('Future Prediction Error:', error);
+    }
   }
 
   const handleAILabFeature = (feature: string) => {

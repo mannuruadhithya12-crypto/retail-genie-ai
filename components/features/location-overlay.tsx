@@ -27,7 +27,7 @@ const presetBackgrounds = [
 export function LocationOverlay({ open, onOpenChange, personImageUrl, garmentImageUrl }: LocationOverlayProps) {
   const [personImage, setPersonImage] = useState<string | null>(personImageUrl || null)
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [resultImage, setResultImage] = useState<string | null>(null)
 
@@ -55,26 +55,38 @@ export function LocationOverlay({ open, onOpenChange, personImageUrl, garmentIma
       return
     }
 
-    setIsGenerating(true)
+    setIsProcessing(true)
     setProgress(0)
 
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 95) {
-          clearInterval(interval)
-          return 95
-        }
-        return prev + Math.random() * 15
+        if (prev >= 90) return 90;
+        return prev + 5;
       })
-    }, 400)
+    }, 300)
 
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    try {
+      const response = await fetch('/api/ai/location-overlay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outfitImage: personImage, backgroundImage })
+      });
+      
+      const data = await response.json();
+      
+      clearInterval(interval);
+      setProgress(100);
 
-    clearInterval(interval)
-    setProgress(100)
-    setResultImage(personImage) // Mock: would be composite image
-    setIsGenerating(false)
-    toast.success('Location overlay generated!')
+      if (response.ok) {
+        setResultImage(data.compositedImageUrl);
+        toast.success(`Overlay Match Score: ${data.lightingMatchScore}%`);
+      }
+    } catch (error) {
+      console.error('Location AI Error:', error);
+      toast.error('Overlay generation failed.');
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   const handleReset = () => {
@@ -186,10 +198,10 @@ export function LocationOverlay({ open, onOpenChange, personImageUrl, garmentIma
               <div className="flex gap-2">
                 <Button
                   onClick={handleGenerate}
-                  disabled={!personImage || !backgroundImage || isGenerating}
+                  disabled={!personImage || !backgroundImage || isProcessing}
                   className="flex-1 gap-2"
                 >
-                  {isGenerating ? (
+                  {isProcessing ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Generating...
@@ -206,7 +218,7 @@ export function LocationOverlay({ open, onOpenChange, personImageUrl, garmentIma
                 </Button>
               </div>
 
-              {isGenerating && (
+              {isProcessing && (
                 <div className="space-y-2">
                   <Progress value={progress} className="h-2" />
                   <p className="text-xs text-center text-muted-foreground">
