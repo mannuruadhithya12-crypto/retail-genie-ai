@@ -24,14 +24,19 @@ export class ProductExtractor {
       const data = await page.evaluate(() => {
         const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
         const twitterImage = document.querySelector('meta[name="twitter:image"]')?.getAttribute('content');
-        const firstImg = document.querySelector('main img, [class*="product"] img, #product-image')?.getAttribute('src');
         
-        const priceElement = document.querySelector('[class*="price"], [id*="price"]');
+        // Find the most likely product image
+        const productImg = document.querySelector('main img[src*="product"], main img[src*="image"], [class*="product"] img, #product-image, .ProductImage-image');
+        const firstLargeImg = Array.from(document.querySelectorAll('img')).find(img => img.width > 200 && img.height > 200);
+
+        const imgUrl = ogImage || twitterImage || productImg?.getAttribute('src') || productImg?.getAttribute('data-src') || firstLargeImg?.src;
+        
+        const priceElement = document.querySelector('[class*="price"], [id*="price"], .ProductPrice-price');
         
         return {
-          imageUrl: ogImage || twitterImage || firstImg || null,
+          imageUrl: imgUrl || null,
           price: priceElement?.textContent?.trim() || null,
-          name: document.title.split('|')[0].trim()
+          name: document.title.split(/\||-/)[0].trim()
         };
       });
 

@@ -14,14 +14,19 @@ export async function POST(request: Request) {
     // 2. Deep Extraction for Top 2 Results (Sequential for stability)
     const deepResults = [];
     for (const res of searchResults.slice(0, 2)) {
+      console.log(`Deep extracting: ${res.url}`);
       const deepData = await ProductExtractor.deepExtract(res.url);
+      
+      const finaleImage = deepData.imageUrl || res.images?.[0] || 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400';
+      
       deepResults.push({
         title: deepData.name || res.title,
         url: res.url,
-        imageUrl: deepData.imageUrl || res.images?.[0] || 'none',
+        imageUrl: finaleImage,
         price: deepData.price || "See site",
         snippet: res.content
       });
+      console.log(`Extracted Image: ${finaleImage}`);
     }
 
     const context = deepResults.map(r => 
