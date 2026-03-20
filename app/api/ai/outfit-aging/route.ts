@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     // For this implementation, we use Gemini Vision to "describe" the aging effect as a high-fidelity text variation
     // or simulate the image URL if using a specific aging service.
     
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     
     const prompt = `Analyze this clothing image for "Outfit Aging Simulator". 
     Describe in technical detail how this exact item would look after ${timeframe.replace('_', ' ')}.

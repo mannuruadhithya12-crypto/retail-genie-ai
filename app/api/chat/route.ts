@@ -17,12 +17,7 @@ export async function POST(request: Request) {
     }
 
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash-latest',
-      tools: [
-        {
-          googleSearch: {},
-        } as any,
-      ],
+      model: 'gemini-1.5-flash',
     })
 
     const systemPrompt = `You are an elite, avant-garde fashion stylist for the premium luxury brand Retail-Genie.
