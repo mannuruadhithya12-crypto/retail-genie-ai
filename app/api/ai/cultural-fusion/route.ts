@@ -4,10 +4,19 @@ import { LiveProductSearch } from '@/lib/live-search';
 
 export async function POST(request: Request) {
   try {
-    const { styles } = await request.json(); // Array of styles
+    const { styles, preferences } = await request.json(); // Array of styles and user prefs
+
+    const prefsText = preferences ? `
+    User Preferences context:
+    - Gender/Shopping For: ${preferences.shopFor || 'Any'}
+    - Climate: ${preferences.climate || 'Any'}
+    - Style: ${preferences.stylePreferences?.join(', ') || 'Any'}
+    Make sure the generated items respect these preferences.
+    ` : '';
 
     const prompt = `Blend these fashion styles: ${Array.isArray(styles) ? styles.join(' and ') : styles}.
     Create a highly specific 'Fusion Look' and suggest 2-3 key clothing items that make up this look.
+    ${prefsText}
     
     RETURN ONLY VALID JSON EXACTLY MATCHING THIS STRUCTURE:
     {

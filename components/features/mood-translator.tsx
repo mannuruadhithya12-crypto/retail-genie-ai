@@ -35,26 +35,10 @@ export function MoodTranslator({ open, onOpenChange, onSelectMood }: MoodTransla
     setSelectedMood(mood)
   }
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!selectedMood) return
-    
-    setIsLoading(true)
-    try {
-      const response = await fetch('/api/ai/mood-outfit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mood: selectedMood, preferences: {} }),
-      })
-      const data = await response.json()
-      if (data.success) {
-        setResult(data)
-        onSelectMood(selectedMood)
-      }
-    } catch (error) {
-      console.error('Mood translation error:', error)
-    } finally {
-      setIsLoading(false)
-    }
+    onSelectMood(selectedMood)
+    onOpenChange(false)
   }
 
   return (
@@ -80,7 +64,6 @@ export function MoodTranslator({ open, onOpenChange, onSelectMood }: MoodTransla
             Select your mood and I will suggest outfits that match your energy
           </p>
 
-          {!result ? (
             <div className="grid grid-cols-2 gap-3">
               {moodOptions.map((mood) => (
                 <motion.button
@@ -109,75 +92,25 @@ export function MoodTranslator({ open, onOpenChange, onSelectMood }: MoodTransla
                 </motion.button>
               ))}
             </div>
-          ) : (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                <p className="text-sm italic">"{result.advice}"</p>
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                {result.pieces?.map((piece: any, i: number) => {
-                  const product = piece.scrapedProduct;
-                  return (
-                    <div key={i} className="flex gap-4 p-3 rounded-xl bg-card border border-border items-center overflow-hidden relative group">
-                      {product ? (
-                        <>
-                          <div className="h-20 w-16 shrink-0 rounded-md overflow-hidden bg-muted">
-                            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                          </div>
-                          <div className="flex-1 min-w-0 pr-2">
-                            <p className="font-bold text-sm text-foreground truncate">{product.brand}</p>
-                            <p className="text-xs text-muted-foreground truncate mb-1">{product.name}</p>
-                            <p className="text-[10px] text-primary/80 line-clamp-2 leading-tight"><i>{piece.reason}</i></p>
-                          </div>
-                          <div className="text-right shrink-0 flex flex-col justify-between h-full py-1">
-                            <p className="font-semibold text-sm">{product.currency === 'USD' ? '$' : ''}{product.price}</p>
-                            <a 
-                              href={product.productUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="text-[10px] bg-primary/10 text-primary hover:bg-primary/20 transition-colors px-2 py-1 rounded-sm uppercase tracking-wider font-bold mt-2 inline-block border border-primary/20"
-                            >
-                              View Item
-                            </a>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex-1">
-                          <p className="font-medium text-sm text-primary">{piece.name}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{piece.reason}</p>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-              <Button variant="outline" size="sm" onClick={() => setResult(null)} className="w-full">
-                Try another mood
-              </Button>
-            </div>
-          )}
         </div>
 
         <div className="flex gap-2">
-          {!result && (
             <>
               <Button
                 variant="outline"
                 className="flex-1"
                 onClick={() => onOpenChange(false)}
-                disabled={isLoading}
               >
                 Cancel
               </Button>
               <Button
                 className="flex-1"
-                disabled={!selectedMood || isLoading}
+                disabled={!selectedMood}
                 onClick={handleConfirm}
               >
-                {isLoading ? 'Translating Mood...' : 'Get Outfit Suggestions'}
+                Get Outfit Suggestions
               </Button>
             </>
-          )}
         </div>
       </DialogContent>
     </Dialog>

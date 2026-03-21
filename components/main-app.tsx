@@ -43,7 +43,7 @@ export function MainApp() {
   const [showFutureStyle, setShowFutureStyle] = useState(false)
   const [agingProduct, setAgingProduct] = useState<Product | null>(null)
 
-  const { setCurrentSession, saveOutfit, addMessage, currentSessionId, createNewSession } = useAppStore()
+  const { setCurrentSession, saveOutfit, addMessage, currentSessionId, createNewSession, preferences } = useAppStore()
 
   const handleTryOn = (product: Product) => {
     setTryOnProduct(product)
@@ -117,7 +117,7 @@ export function MainApp() {
       const response = await fetch('/api/ai/mood-outfit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mood: mood, preferences: {} })
+        body: JSON.stringify({ mood: mood, preferences })
       });
       
       const data = await response.json();
@@ -174,7 +174,7 @@ export function MainApp() {
       const response = await fetch('/api/ai/calendar-outfit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ events })
+        body: JSON.stringify({ events, preferences })
       });
       
       const data = await response.json();
@@ -223,7 +223,7 @@ export function MainApp() {
       const response = await fetch('/api/ai/cultural-fusion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ styles: cultures.join(' + ') })
+        body: JSON.stringify({ styles: cultures.join(' + '), preferences })
       });
       
       const data = await response.json();
