@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, Upload, X, Loader2, Sparkles, Download, Share2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
@@ -30,6 +31,7 @@ export function LocationOverlay({ open, onOpenChange, personImageUrl, garmentIma
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [resultImage, setResultImage] = useState<string | null>(null)
+  const [resultData, setResultData] = useState<any>(null)
 
   const handlePersonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -79,6 +81,7 @@ export function LocationOverlay({ open, onOpenChange, personImageUrl, garmentIma
 
       if (response.ok) {
         setResultImage(data.compositedImageUrl);
+        setResultData(data);
         toast.success(`Overlay Match Score: ${data.lightingMatchScore}%`);
       }
     } catch (error) {
@@ -234,29 +237,53 @@ export function LocationOverlay({ open, onOpenChange, personImageUrl, garmentIma
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="space-y-4"
+                    className="space-y-6"
                   >
-                    <div className="relative aspect-[3/4] max-w-md mx-auto rounded-xl overflow-hidden border border-border shadow-2xl bg-black">
-                      {/* Background Lighting Layer */}
+                    <div className="relative aspect-[3/4] max-w-md mx-auto rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-slate-950">
                       {backgroundImage && (
-                        <Image src={backgroundImage} alt="Background Depth" fill className="object-cover opacity-95 transition-opacity duration-1000" />
+                        <Image src={backgroundImage} alt="Background" fill className="object-cover opacity-60" />
                       )}
                       
-                      {/* Foreground Subject Composited Layer with Ambient Multiplier Masking */}
                       <Image 
                         src={resultImage} 
                         alt="Composited Result" 
                         fill 
-                        className="object-contain drop-shadow-2xl scale-95 hover:scale-100 transition-transform duration-700"
-                        style={{ mixBlendMode: 'luminosity' }}
+                        className="object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] scale-90 transition-transform duration-700"
                       />
+
+                      {/* AI Floating Badges */}
+                      <div className="absolute top-4 left-4 right-4 flex justify-between gap-2">
+                        <Badge className="bg-primary/90 text-[10px] font-headline tracking-tighter mix-blend-overlay">
+                          LIGHTING MATCH: {resultData?.lightingMatchScore}%
+                        </Badge>
+                      </div>
+
+                      <div className="absolute bottom-4 left-4 right-4 p-4 rounded-2xl bg-black/40 backdrop-blur-md border border-white/10">
+                         <p className="text-[10px] font-headline uppercase tracking-widest text-primary mb-1">Vibe Check</p>
+                         <p className="text-sm font-medium text-white leading-tight italic">"{resultData?.vibeCheck || 'Looking sharp!'}"</p>
+                      </div>
                     </div>
+
+                    {/* Pro Tips */}
+                    {resultData?.adjustments && resultData.adjustments.length > 0 && (
+                      <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                        <p className="text-[10px] font-headline uppercase tracking-widest text-primary mb-2">Pro Lighting Adjustments</p>
+                        <div className="flex flex-wrap gap-2">
+                          {resultData.adjustments.map((adj: string) => (
+                            <Badge key={adj} variant="outline" className="text-[10px] border-primary/20 bg-primary/5">
+                              {adj}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex justify-center gap-2">
-                      <Button variant="outline" className="gap-2">
+                      <Button variant="outline" className="flex-1 gap-2 rounded-xl">
                         <Download className="h-4 w-4" />
-                        Download
+                        Save Image
                       </Button>
-                      <Button variant="outline" className="gap-2">
+                      <Button variant="outline" className="flex-1 gap-2 rounded-xl">
                         <Share2 className="h-4 w-4" />
                         Share
                       </Button>
