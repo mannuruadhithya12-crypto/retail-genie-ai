@@ -10,9 +10,10 @@ import type { Results } from '@mediapipe/pose';
 
 interface ARMirrorProps {
   selectedGarments: Garment[];
+  onPoseUpdate?: (results: Results) => void;
 }
 
-export function ARMirror({ selectedGarments }: ARMirrorProps) {
+export function ARMirror({ selectedGarments, onPoseUpdate }: ARMirrorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const [poseResults, setPoseResults] = useState<Results | null>(null);
@@ -24,6 +25,7 @@ export function ARMirror({ selectedGarments }: ARMirrorProps) {
   useEffect(() => {
     engineRef.current = new PoseTrackingEngine((results) => {
       setPoseResults(results);
+      if (onPoseUpdate) onPoseUpdate(results);
     });
 
     if (videoRef.current) {

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
 import type { Product } from '@/lib/types'
 const ARMirror = dynamic(() => import('../ar/ARMirror').then(mod => mod.ARMirror), { ssr: false })
@@ -30,6 +31,8 @@ export function AtelierView() {
   const [selectedWardrobeItem, setSelectedWardrobeItem] = useState<string | null>(null)
   const [clothingDb, setClothingDb] = useState<Garment[]>([])
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([])
+  const [detectedForm, setDetectedForm] = useState<string>('Detecting...')
+  const [stability, setStability] = useState(0)
 
   useEffect(() => {
     fetch('/api/clothing')
@@ -80,7 +83,24 @@ export function AtelierView() {
           {/* Main Camera Preview Box */}
           <div className={`relative ${isCamerActive ? 'h-[80vh]' : 'aspect-[4/3]'} w-full rounded-3xl overflow-hidden bg-slate-900 border border-white/5 group shadow-2xl`}>
             {isCamerActive ? (
-              <ARMirror selectedGarments={activeGarments} />
+              <ARMirror 
+                selectedGarments={activeGarments} 
+                onPoseUpdate={(results) => {
+                  // Simplified detection logic
+                  if (results.poseLandmarks) {
+                    const l = results.poseLandmarks;
+                    const sw = Math.abs(l[12].x - l[11].x);
+                    const hw = Math.abs(l[24].x - l[23].x);
+                    const ratio = sw / hw;
+                    
+                    if (ratio > 1.3) setDetectedForm('ATHLETIC - SIZE L');
+                    else if (ratio < 0.9) setDetectedForm('CURVY - SIZE M');
+                    else setDetectedForm('SLIM - SIZE S');
+                    
+                    setStability(Math.floor(l[0].visibility! * 100));
+                  }
+                }}
+              />
             ) : (
               <>
                 <Image 
@@ -106,11 +126,11 @@ export function AtelierView() {
                         <div className="w-32 h-1.5 bg-white/10 rounded-full overflow-hidden">
                           <motion.div 
                             initial={{ width: "0%" }}
-                            animate={{ width: "75%" }}
+                            animate={{ width: `${stability}%` }}
                             className="h-full bg-secondary shadow-[0_0_8px_#5f9eff]"
                           />
                         </div>
-                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">Stability: 98.4%</p>
+                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter">Stability: {stability}%</p>
                       </div>
                     </motion.div>
 
@@ -134,14 +154,20 @@ export function AtelierView() {
                     <motion.button 
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setIsCameraActive(true)}
+                      onClick={() => {
+                        if (selectedWardrobeItem) {
+                          setIsCameraActive(true)
+                        } else {
+                          toast.error('Please select an item from your wardrobe first!')
+                        }
+                      }}
                       className="flex flex-col items-center gap-3 group"
                     >
                       <div className="w-20 h-20 rounded-full glass-panel border-4 border-primary flex items-center justify-center text-primary shadow-[0_0_30px_rgba(219,144,255,0.4)] cursor-pointer">
                         <Sparkles className="h-10 w-10 fill-primary/10" />
                       </div>
                       <span className="text-[10px] font-headline tracking-widest uppercase font-bold text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-                        Try Outfit
+                        Try Selection
                       </span>
                     </motion.button>
                   </div>
@@ -149,7 +175,7 @@ export function AtelierView() {
                   <div className="flex justify-between items-end">
                     <div className="glass-panel p-4 rounded-2xl border border-white/10 shadow-xl">
                       <p className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mb-1">Detected Form</p>
-                      <p className="text-sm font-headline font-bold text-white tracking-tight">ATHLETIC - SIZE M</p>
+                      <p className="text-sm font-headline font-bold text-white tracking-tight">{detectedForm}</p>
                     </div>
                     <div className="flex gap-2">
                       <span className="px-3 py-1 glass-panel rounded-full text-[10px] tracking-widest uppercase font-bold text-white border border-white/10">4K Live</span>
@@ -202,7 +228,7 @@ export function AtelierView() {
               <h4 className="font-headline font-bold text-sm tracking-tight text-white">AI Accessory Suggestion</h4>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed mb-5">
-              Based on your outfit silhouette, the <span className="text-secondary font-bold">Prism Shades</span> would complete this avant-garde look.
+              Based on your <span className="text-secondary font-bold">{detectedForm.split(' ')[0].toLowerCase()}</span> silhouette, the <span className="text-secondary font-bold">Prism Shades</span> would complete this avant-garde look.
             </p>
             <Button className="w-full py-2.5 rounded-xl bg-secondary/10 border border-secondary/20 text-secondary text-[10px] font-headline font-bold tracking-widest uppercase hover:bg-secondary/20 transition-all">
               Apply Selection

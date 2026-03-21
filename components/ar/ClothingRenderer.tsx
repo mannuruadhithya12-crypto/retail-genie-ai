@@ -119,20 +119,55 @@ export function ClothingRenderer({ garment, poseResults }: ClothingRendererProps
     }
 
     if (canTrack) {
+      // Body Center based on torso
+      const leftShoulder = landmarks[11];
+      const rightShoulder = landmarks[12];
+      const leftHip = landmarks[23];
+      const rightHip = landmarks[24];
+
+      const avgX = (leftShoulder.x + rightShoulder.x + leftHip.x + rightHip.x) / 4;
+      const avgY = (leftShoulder.y + rightShoulder.y + leftHip.y + rightHip.y) / 4;
+      const avgZ = (leftShoulder.z + rightShoulder.z + leftHip.z + rightHip.z) / 4;
+
       // Convert normalized MediaPipe coordinates (0 to 1) to Three.js coordinates
-      const targetPos = new THREE.Vector3((centerX - 0.5) * 5, -(centerY - 0.5) * 5, -centerZ * 5);
+      const targetPos = new THREE.Vector3((avgX - 0.5) * 5, -(avgY - 0.5) * 5, -avgZ * 5);
+      
+      // Precision anchoring based on attachment type
+      if (garment.attachmentType === 'upper_body') {
+        const torsoCenter = new THREE.Vector3(
+          ((leftShoulder.x + rightShoulder.x) / 2 - 0.5) * 5,
+          -((leftShoulder.y + rightShoulder.y + leftHip.y + rightHip.y) / 4 - 0.5) * 5,
+          -((leftShoulder.z + rightShoulder.z) / 2) * 5
+        );
+        targetPos.copy(torsoCenter);
+      } else if (garment.attachmentType === 'lower_body') {
+        const hipCenter = new THREE.Vector3(
+          ((leftHip.x + rightHip.x) / 2 - 0.5) * 5,
+          -((leftHip.y + rightHip.y) / 2 - 0.5) * 5,
+          -((leftHip.z + rightHip.z) / 2) * 5
+        );
+        targetPos.copy(hipCenter);
+      }
+
       const movementDelta = targetPos.clone().sub(previousCenter.current);
       previousCenter.current.copy(targetPos);
 
-      // Lerp for smooth translation
-      meshRef.current.position.lerp(targetPos.add(new THREE.Vector3(...garment.positionOffset)), 0.5);
+      // Jitter Compensation: Only move if delta is significant or use strong lerp
+      const lerpFactor = movementDelta.length() > 0.05 ? 0.3 : 0.15;
+      meshRef.current.position.lerp(targetPos.add(new THREE.Vector3(...garment.positionOffset)), lerpFactor);
       
-      // Smooth rotation
-      meshRef.current.rotation.z = -targetAngle;
+      // Precision Rotation
+      meshRef.current.rotation.z = THREE.MathUtils.lerp(meshRef.current.rotation.z, -targetAngle, 0.2);
       
-      meshRef.current.scale.set(baseScale * garment.scale[0], baseScale * garment.scale[1], baseScale * garment.scale[2]);
+      // Precision Scaling
+      const scaleLerp = 0.2;
+      meshRef.current.scale.set(
+        THREE.MathUtils.lerp(meshRef.current.scale.x, baseScale * garment.scale[0], scaleLerp),
+        THREE.MathUtils.lerp(meshRef.current.scale.y, baseScale * garment.scale[1], scaleLerp),
+        THREE.MathUtils.lerp(meshRef.current.scale.z, baseScale * garment.scale[2], scaleLerp)
+      );
 
-      // Apply cloth physics to the vertices
+      // Vertex-level physics update for realism
       meshRef.current.children.forEach((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
