@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { StylistEngine } from '@/lib/stylist-engine';
+import dbConnect from '@/lib/mongodb';
 
 export async function POST(request: Request) {
   try {
+    await dbConnect();
     const { message, messages = [] } = await request.json();
 
     const response = await StylistEngine.processRequest(

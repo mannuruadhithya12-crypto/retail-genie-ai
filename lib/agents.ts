@@ -3,8 +3,15 @@ import { chatOllama } from './ollama';
 
 export class ProductSearchAgent {
   static async findItems(query: string, filter?: any) {
-    console.log(`[SearchAgent] Finding items for: ${query}`);
-    return await ClothingService.getProducts(query, 8);
+    console.log(`[SearchAgent] Querying MongoDB for: ${query}`);
+    try {
+      const results = await ClothingService.getProducts(query, 8);
+      console.log(`[SearchAgent] MongoDB returned ${results.length} items`);
+      return results;
+    } catch (e: any) {
+      console.error(`[SearchAgent] MongoDB Error: ${e.message}`);
+      throw e;
+    }
   }
 }
 

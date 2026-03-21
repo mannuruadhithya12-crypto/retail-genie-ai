@@ -11,8 +11,9 @@ export interface StylistResponse {
 export class StylistEngine {
   static async processRequest(query: string, history: any[] = []): Promise<any> {
     try {
-      // 1. Agent: Search (Real Data only)
+      console.log(`[StylistEngine] Processing: ${query}`);
       const products = await ProductSearchAgent.findItems(query);
+      console.log(`[StylistEngine] Found ${products?.length || 0} products`);
       
       if (!products || products.length === 0) {
         return { 
@@ -83,9 +84,9 @@ export class StylistEngine {
         stylist_advice: result.stylist_advice || "I found these items that perfectly match your request.",
         products: finalProducts.length > 0 ? finalProducts : analyzedProducts.slice(0, 3)
       };
-    } catch (error) {
-      console.error('Stylist Engine Error:', error);
-      return { stylist_advice: "Error generating recommendation.", products: [] };
+    } catch (error: any) {
+      console.error('CRITICAL Stylist Engine Error:', error.message, error.stack);
+      return { stylist_advice: `I encountered an error: ${error.message}. Please check if Ollama/MongoDB are running.`, products: [] };
     }
   }
 

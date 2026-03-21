@@ -1,9 +1,11 @@
 import { ClothingItem } from './models';
 import { VectorSearch } from './vector-search';
+import dbConnect from './mongodb';
 import type { Product } from './types';
 
 export class ClothingService {
   static async getProducts(query?: string, limit: number = 20): Promise<Product[]> {
+    await dbConnect();
     if (query) {
       const items = await VectorSearch.search(query, limit);
       return items.map(this.mapToProduct);

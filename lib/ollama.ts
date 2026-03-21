@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 export interface OllamaOptions {
   model: string;
   prompt: string;
