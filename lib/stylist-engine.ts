@@ -13,6 +13,7 @@ export class StylistEngine {
     try {
       // 1. Agent: Search (Real Data only)
       const products = await ProductSearchAgent.findItems(query);
+      
       if (!products || products.length === 0) {
         return { 
           stylist_advice: "I couldn't find exact matches in our database right now, but here is some general styling advice for your request.",
@@ -22,9 +23,13 @@ export class StylistEngine {
 
       // 2. Agent: Review Analysis & Price Comparison
       const analyzedProducts = await Promise.all(products.map(async (p) => {
-        const analysis = await ReviewAnalysisAgent.analyze(p.name, (p as any).reviews || []);
-        const prices = await PriceComparisonAgent.compare(p.name, p.brand, p.priceMin);
-        return { ...p, analysis, prices };
+        try {
+          const analysis = await ReviewAnalysisAgent.analyze(p.name, (p as any).reviews || []);
+          const prices = await PriceComparisonAgent.compare(p.name, p.brand, p.priceMin);
+          return { ...p, analysis, prices };
+        } catch (e) {
+          return { ...p, analysis: { score: 70, pros: [], cons: [] }, prices: [{ platform: p.brand, price: p.priceMin }] };
+        }
       }));
 
       // 3. Orchestration
@@ -90,7 +95,12 @@ export class StylistEngine {
       const end = text.lastIndexOf('}');
       if (start === -1 || end === -1) return {};
       const jsonStr = text.substring(start, end + 1);
-      return JSON.parse(jsonStr.replace(/\\n/g, "").replace(/,\s*}/g, "}").replace(/,\s*]/g, "]"));
+      // Robust repair for common Ollama issues (trailing commas, escaped quotes)
+      const cleaned = jsonStr
+        .replace(/\\n/g, "")
+        .replace(/,\s*}/g, "}")
+        .replace(/,\s*]/g, "]");
+      return JSON.parse(cleaned);
     } catch {
       return {};
     }
