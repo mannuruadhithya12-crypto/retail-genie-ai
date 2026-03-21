@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
+import { useGLTF, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { Garment } from './GarmentLayerManager';
 import { ClothPhysicsEngine } from './ClothPhysicsEngine';
@@ -11,8 +11,23 @@ interface ClothingRendererProps {
   poseResults: Results | null;
 }
 
+function GLTFModel({ url }: { url: string }) {
+  const { scene } = useGLTF(url);
+  return <primitive object={scene.clone()} />;
+}
+
+function ImageModel({ url }: { url: string }) {
+  const texture = useTexture(url);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return (
+    <mesh>
+      <planeGeometry args={[1, 1.5, 10, 10]} />
+      <meshStandardMaterial map={texture} transparent side={THREE.DoubleSide} alphaTest={0.1} />
+    </mesh>
+  );
+}
+
 export function ClothingRenderer({ garment, poseResults }: ClothingRendererProps) {
-  const { scene } = useGLTF(garment.modelUrl);
   const meshRef = useRef<THREE.Group>(null);
   const physicsEngine = useRef(new ClothPhysicsEngine());
   const previousCenter = useRef(new THREE.Vector3());
@@ -110,5 +125,16 @@ export function ClothingRenderer({ garment, poseResults }: ClothingRendererProps
     }
   });
 
-  return <primitive ref={meshRef} object={scene.clone()} />;
+  return (
+    <group ref={meshRef}>
+      <Suspense fallback={null}>
+        {garment.modelUrl && garment.modelUrl.length > 0 ? (
+          <GLTFModel url={garment.modelUrl} />
+        ) : (
+          garment.imageUrl ? <ImageModel url={garment.imageUrl} /> : null
+        )}
+      </Suspense>
+    </group>
+  );
 }
+

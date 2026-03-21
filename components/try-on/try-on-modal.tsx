@@ -165,6 +165,7 @@ export function TryOnModal({ open, onOpenChange, product, onSave }: TryOnModalPr
                             type: 'outer',
                             attachmentType: 'upper_body',
                             modelUrl: '', 
+                            imageUrl: product.imageUrl,
                             scale: [1, 1, 1],
                             positionOffset: [0, 0, 0]
                           }

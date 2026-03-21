@@ -6,6 +6,7 @@ export interface Garment {
   type: GarmentType;
   attachmentType: AttachmentType;
   modelUrl: string;
+  imageUrl?: string;
   scale: number[];
   positionOffset: number[];
 }

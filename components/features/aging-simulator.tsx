@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Clock, Sparkles, X, Loader2 } from 'lucide-react'
+import { Clock, Sparkles, X, Loader2, Upload } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +25,18 @@ const agingOptions = [
 
 export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: AgingSimulatorProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
+  const [customImage, setCustomImage] = useState<string | null>(null)
+  const displayImage = customImage || imageUrl || ''
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => setCustomImage(e.target?.result as string)
+      reader.readAsDataURL(file)
+    }
+  }
+
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [agedImage, setAgedImage] = useState<string | null>(null)
@@ -51,7 +63,7 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
       const response = await fetch('/api/ai/outfit-aging', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: imageUrl, timeframe: optionId, productName })
+        body: JSON.stringify({ image: displayImage, timeframe: optionId, productName })
       });
       
       const data = await response.json();
@@ -65,7 +77,7 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
           fabricWear: Math.round((100 - data.durabilityScore) / 2),
           pillingLevel: Math.round((100 - data.durabilityScore) / 1.5),
         })
-        setAgedImage(imageUrl) // Still use original for visual filter simulation
+        setAgedImage(displayImage) // Still use original for visual filter simulation
         toast.success('Simulation complete!')
       }
     } catch (error) {
@@ -131,13 +143,27 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Original</p>
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden border border-border">
-                <Image
-                  src={imageUrl}
-                  alt="Original"
-                  fill
-                  className="object-cover"
-                />
+              <div className="relative aspect-[3/4] rounded-xl overflow-hidden border border-border bg-muted/10 group">
+                {displayImage ? (
+                  <>
+                    <Image
+                      src={displayImage}
+                      alt="Original"
+                      fill
+                      className="object-cover"
+                    />
+                    <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white">
+                       <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                       <span className="text-sm font-medium">Change Photo</span>
+                    </label>
+                  </>
+                ) : (
+                  <label className="absolute inset-0 flex flex-col items-center justify-center hover:bg-muted/30 transition-colors cursor-pointer text-muted-foreground hover:text-foreground">
+                    <Upload className="h-8 w-8 mb-2 opacity-50" />
+                    <span className="text-sm font-medium">Upload Live Picture</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                  </label>
+                )}
               </div>
             </div>
 
