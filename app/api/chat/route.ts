@@ -4,7 +4,12 @@ import dbConnect from '@/lib/mongodb';
 
 export async function POST(request: Request) {
   try {
-    await dbConnect();
+    try {
+      await dbConnect();
+    } catch (dbError) {
+      console.warn('MongoDB connection failed (IP might not be whitelisted). Falling back to memory-only mode.');
+    }
+
     const { message, messages = [] } = await request.json();
 
     const response = await StylistEngine.processRequest(
@@ -22,3 +27,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

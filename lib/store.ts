@@ -1,7 +1,8 @@
 'use client'
 
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware'
+import { get, set, del } from 'idb-keyval'
 import type { 
   UserPreferences, 
   ChatSession, 
@@ -13,6 +14,19 @@ import type {
   StylePreference,
   ShopFor
 } from './types'
+
+// Setup robust IndexedDB storage to bypass the 5MB browser localStorage limit
+const idbStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    return (await get(name)) || null
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    await set(name, value)
+  },
+  removeItem: async (name: string): Promise<void> => {
+    await del(name)
+  },
+}
 
 interface AppState {
   // User preferences
@@ -37,6 +51,8 @@ interface AppState {
   // UI state
   sidebarOpen: boolean
   setSidebarOpen: (open: boolean) => void
+  isTyping: boolean
+  setIsTyping: (typing: boolean) => void
 }
 
 const defaultPreferences: UserPreferences = {
@@ -122,9 +138,13 @@ export const useAppStore = create<AppState>()(
       // UI state
       sidebarOpen: true,
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+      
+      isTyping: false,
+      setIsTyping: (typing) => set({ isTyping: typing }),
     }),
     {
       name: 'retail-genie-storage',
+      storage: createJSONStorage(() => idbStorage),
       partialize: (state) => ({
         preferences: state.preferences,
         chatSessions: state.chatSessions,

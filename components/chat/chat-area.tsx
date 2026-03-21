@@ -22,9 +22,9 @@ export function ChatArea({ onTryOn, onProductDetails }: ChatAreaProps) {
     savedOutfits,
     saveOutfit,
     preferences,
+    isTyping,
+    setIsTyping,
   } = useAppStore()
-
-  const [isTyping, setIsTyping] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const currentSession = chatSessions.find((s) => s.id === currentSessionId)

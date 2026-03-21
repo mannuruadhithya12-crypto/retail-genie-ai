@@ -30,6 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import type { Product, TryOnResult } from '@/lib/types'
 import { useAppStore } from '@/lib/store'
+import { ARMirror } from '@/components/ar/ARMirror'
 
 interface TryOnModalProps {
   open: boolean
@@ -49,36 +50,8 @@ export function TryOnModal({ open, onOpenChange, product, onSave }: TryOnModalPr
   const [agingYears, setAgingYears] = useState(0)
   const { preferences } = useAppStore()
 
-  // Phase 9: AR Fitting Mirror
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isARActive, setIsARActive] = useState(false);
-
-  const startAR = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setIsARActive(true);
-        setMode('ar');
-        toast.success("AR Fitting Mirror Activated!");
-      }
-    } catch (err) {
-      toast.error("Camera access denied.");
-    }
-  };
-
-  const stopAR = () => {
-    if (videoRef.current?.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach(track => track.stop());
-    }
-    setIsARActive(false);
-    setMode('standard');
-  };
-
   useEffect(() => {
     if (!open) {
-      stopAR();
       setPersonImage(null);
       setBackgroundImage(null);
       setIsGenerating(false);
@@ -144,7 +117,7 @@ export function TryOnModal({ open, onOpenChange, product, onSave }: TryOnModalPr
   if (!product) return null
 
   return (
-    <Dialog open={open} onOpenChange={(val) => { if(!val) stopAR(); onOpenChange(val); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl h-[90vh] p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b border-border">
           <div className="flex items-center justify-between">
@@ -161,10 +134,10 @@ export function TryOnModal({ open, onOpenChange, product, onSave }: TryOnModalPr
         <div className="flex-1 overflow-auto p-6">
           <div className="grid lg:grid-cols-2 gap-6 h-full">
             <div className="space-y-4">
-              <Tabs value={mode === 'ar' ? 'ar' : 'standard'} className="w-full">
+              <Tabs value={mode === 'ar' ? 'ar' : 'standard'} onValueChange={(val) => setMode(val as any)} className="w-full h-full flex flex-col">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="standard" onClick={stopAR}>Photo Upload</TabsTrigger>
-                  <TabsTrigger value="ar" onClick={startAR}>AR Mirror</TabsTrigger>
+                  <TabsTrigger value="standard">Photo Upload</TabsTrigger>
+                  <TabsTrigger value="ar">AR Mirror</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="standard" className="mt-4">
@@ -182,25 +155,34 @@ export function TryOnModal({ open, onOpenChange, product, onSave }: TryOnModalPr
                   )}
                 </TabsContent>
 
-                <TabsContent value="ar" className="mt-4">
-                  <div className="relative aspect-[3/4] rounded-xl overflow-hidden border-2 border-primary bg-black">
-                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" />
-                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                       <div className="w-64 h-96 border-2 border-dashed border-primary/50 rounded-full opacity-30" />
-                       <Image src={product.imageUrl} alt="Overlay" width={300} height={400} className="absolute opacity-60 animate-pulse" />
+                <TabsContent value="ar" className="mt-4 flex-1 min-h-[500px]">
+                  {mode === 'ar' && (
+                    <div className="w-full h-[500px] border-2 border-primary rounded-xl overflow-hidden shadow-2xl">
+                      <ARMirror 
+                        selectedGarments={[
+                          {
+                            id: product.id,
+                            type: 'outer',
+                            attachmentType: 'upper_body',
+                            modelUrl: '', 
+                            scale: [1, 1, 1],
+                            positionOffset: [0, 0, 0]
+                          }
+                        ]} 
+                      />
                     </div>
-                  </div>
+                  )}
                 </TabsContent>
               </Tabs>
 
               <div className="flex gap-2">
-                <Button onClick={generateTryOn} disabled={!personImage || isGenerating} className="flex-1 gap-2">
+                <Button onClick={generateTryOn} disabled={!personImage || isGenerating || mode === 'ar'} className="flex-1 gap-2">
                   <Sparkles className="h-4 w-4" />
                   Generate Results
                 </Button>
-                <Button variant="outline" onClick={isARActive ? stopAR : startAR}>
+                <Button variant="outline" onClick={() => setMode(mode === 'ar' ? 'standard' : 'ar')}>
                   <Camera className="h-4 w-4 mr-2" />
-                  {isARActive ? "Stop Mirror" : "Live Mirror"}
+                  {mode === 'ar' ? "Stop Mirror" : "Live Mirror"}
                 </Button>
               </div>
             </div>

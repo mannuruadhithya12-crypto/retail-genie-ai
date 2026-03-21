@@ -43,7 +43,7 @@ export function MainApp() {
   const [showFutureStyle, setShowFutureStyle] = useState(false)
   const [agingProduct, setAgingProduct] = useState<Product | null>(null)
 
-  const { setCurrentSession, saveOutfit, addMessage, currentSessionId, createNewSession, preferences } = useAppStore()
+  const { setCurrentSession, saveOutfit, addMessage, currentSessionId, createNewSession, preferences, setIsTyping } = useAppStore()
 
   const handleTryOn = (product: Product) => {
     setTryOnProduct(product)
@@ -112,6 +112,7 @@ export function MainApp() {
     })
 
     setCurrentView('chat')
+    setIsTyping(true)
 
     try {
       const response = await fetch('/api/ai/mood-outfit', {
@@ -152,6 +153,8 @@ export function MainApp() {
     } catch (error) {
       console.error('Mood AI Error:', error);
       toast.error('AI styling failed. Please try again.');
+    } finally {
+      setIsTyping(false)
     }
   }
 
@@ -169,6 +172,7 @@ export function MainApp() {
     })
 
     setCurrentView('chat')
+    setIsTyping(true)
 
     try {
       const response = await fetch('/api/ai/calendar-outfit', {
@@ -205,6 +209,8 @@ export function MainApp() {
       }
     } catch (error) {
       console.error('Calendar AI Error:', error);
+    } finally {
+      setIsTyping(false)
     }
   }
 
@@ -222,6 +228,7 @@ export function MainApp() {
     })
 
     setCurrentView('chat')
+    setIsTyping(true)
 
     try {
       const response = await fetch('/api/ai/cultural-fusion', {
@@ -259,6 +266,8 @@ export function MainApp() {
     } catch (error) {
       console.error('Fusion AI Error:', error);
       toast.error('Fusion generation failed.');
+    } finally {
+      setIsTyping(false)
     }
   }
 
@@ -276,6 +285,7 @@ export function MainApp() {
     })
 
     setCurrentView('chat')
+    setIsTyping(true)
 
     try {
       // Send directly to the main Stylist chat engine for live scraping 
@@ -298,6 +308,8 @@ export function MainApp() {
       }
     } catch (error) {
       console.error('Voice AI Error:', error);
+    } finally {
+      setIsTyping(false)
     }
   }
 
@@ -408,6 +420,7 @@ export function MainApp() {
     })
     
     setCurrentView('chat')
+    setIsTyping(true)
 
     try {
       const response = await fetch('/api/chat', {
@@ -434,6 +447,8 @@ export function MainApp() {
       }
     } catch (error) {
       console.error('Sustainability Error:', error);
+    } finally {
+      setIsTyping(false)
     }
   }
 
