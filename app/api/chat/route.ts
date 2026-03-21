@@ -10,17 +10,10 @@ export async function POST(request: Request) {
       messages.slice(-5).map((m: any) => ({ role: m.role, content: m.content }))
     );
 
-    // Map verdicts back to the product objects for frontend rendering
-    const products = response.recommendedOutfit.map(p => ({
-      ...p,
-      verdict: response.verdicts[p.id]?.verdict || p.verdict,
-      verdictReasons: [response.verdicts[p.id]?.reason || 'Expert selection']
-    }));
-
     return NextResponse.json({
       success: true,
-      message: response.advice,
-      products: products
+      message: response.stylist_advice,
+      products: response.products
     });
   } catch (error: any) {
     console.error('Stylist Engine Error:', error);
