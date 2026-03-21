@@ -8,6 +8,7 @@ export interface StylistResponse {
   verdicts: Record<string, { verdict: 'strong-buy' | 'consider' | 'skip'; reason: string }>;
 }
 
+export class StylistEngine {
   static async processRequest(query: string, history: any[] = []): Promise<any> {
     try {
       // 1. Agent: Search (Real Data only)
