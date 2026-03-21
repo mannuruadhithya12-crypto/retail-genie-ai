@@ -12,10 +12,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { mockProducts } from '@/lib/mock-data'
 import type { Product } from '@/lib/types'
 
+import { useAppStore } from '@/lib/store'
+
 interface FutureStyleProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onAddToChat: (products: Product[]) => void
+  onAddToChat: (products: Product[], evolutionData?: any) => void
 }
 
 interface StyleEvolution {
@@ -37,6 +39,7 @@ export function FutureStyle({ open, onOpenChange, onAddToChat }: FutureStyleProp
   const [progress, setProgress] = useState(0)
   const [evolution, setEvolution] = useState<StyleEvolution | null>(null)
   const [futureProof, setFutureProof] = useState<FutureProofItem[]>([])
+  const { preferences } = useAppStore()
 
   useEffect(() => {
     if (open && !evolution) {
@@ -50,55 +53,63 @@ export function FutureStyle({ open, onOpenChange, onAddToChat }: FutureStyleProp
 
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 95) {
-          clearInterval(interval)
-          return 95
-        }
-        return prev + Math.random() * 12
+        if (prev >= 90) return prev
+        return prev + Math.random() * 10
       })
-    }, 300)
+    }, 400)
 
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    try {
+      const response = await fetch('/api/ai/style-predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recentOutfits: [], recentHistory: [], preferences })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setEvolution({
+          current: data.currentStyle,
+          predicted: data.predictedStyle,
+          confidence: data.confidence || 85,
+          timeline: data.timeline || '6-12 months',
+          influences: data.influences || [],
+        });
+
+        const formattedPieces = (data.investmentPieces || []).map((p: any) => {
+          const sp = p.scrapedProduct;
+          return {
+            product: {
+              id: crypto.randomUUID(),
+              name: sp ? sp.name : p.name,
+              brand: sp ? sp.brand : 'Future Investment',
+              imageUrl: sp ? sp.imageUrl : 'https://images.unsplash.com/photo-1591047139829-d91aec36beea?auto=format&fit=crop&q=80&w=400',
+              priceMin: sp ? sp.price : 150,
+              priceMax: sp ? (sp.priceMax || sp.price) : 500,
+              currency: sp ? sp.currency : 'USD',
+              productUrl: sp ? sp.productUrl : '#',
+              verdict: 'strong-buy',
+              verdictReasons: [p.reason || 'Future proof'],
+              retailers: []
+            },
+            reason: p.reason,
+            longevity: p.longevity || 90
+          }
+        });
+        
+        setFutureProof(formattedPieces);
+      }
+    } catch (error) {
+      console.error('Future Prediction Error:', error);
+    }
 
     clearInterval(interval)
     setProgress(100)
-
-    setEvolution({
-      current: 'Casual Contemporary',
-      predicted: 'Minimalist Luxury',
-      confidence: 87,
-      timeline: '6-12 months',
-      influences: [
-        'Increasing preference for neutral tones',
-        'Growing interest in quality over quantity',
-        'Shift toward sustainable brands',
-        'Preference for timeless silhouettes',
-      ],
-    })
-
-    setFutureProof([
-      {
-        product: mockProducts[0],
-        reason: 'Versatile neutral that bridges casual and formal',
-        longevity: 95,
-      },
-      {
-        product: mockProducts[1],
-        reason: 'Classic silhouette with modern minimalist appeal',
-        longevity: 88,
-      },
-      {
-        product: mockProducts[2],
-        reason: 'Investment piece that aligns with your evolving taste',
-        longevity: 92,
-      },
-    ])
-
     setIsAnalyzing(false)
   }
 
   const handleAddAll = () => {
-    onAddToChat(futureProof.map((item) => item.product))
+    onAddToChat(futureProof.map((item) => item.product), evolution)
     onOpenChange(false)
   }
 

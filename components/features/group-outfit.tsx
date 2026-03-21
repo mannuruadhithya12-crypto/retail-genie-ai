@@ -11,13 +11,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { mockProducts } from '@/lib/mock-data'
 import type { Product } from '@/lib/types'
 
 interface GroupOutfitProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onAddToChat: (products: Product[]) => void
+  onAddToChat: (products: Product[], coordinationLogic?: string, themeName?: string) => void
 }
 
 interface GroupMember {
@@ -43,6 +42,7 @@ export function GroupOutfit({ open, onOpenChange, onAddToChat }: GroupOutfitProp
   const [isGenerating, setIsGenerating] = useState(false)
   const [progress, setProgress] = useState(0)
   const [results, setResults] = useState<{ memberId: string; products: Product[] }[]>([])
+  const [aiAnalysis, setAiAnalysis] = useState<{coordinationLogic?: string, themeName?: string}>({})
 
   const handleAddMember = () => {
     if (members.length >= 4) {
@@ -96,33 +96,64 @@ export function GroupOutfit({ open, onOpenChange, onAddToChat }: GroupOutfitProp
 
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 95) {
-          clearInterval(interval)
-          return 95
-        }
-        return prev + Math.random() * 12
+        if (prev >= 95) return 95
+        return prev + Math.random() * 5
       })
-    }, 400)
+    }, 500)
 
-    await new Promise((resolve) => setTimeout(resolve, 4000))
+    try {
+      const occName = occasions.find(o => o.id === occasion)?.label || occasion;
+      const response = await fetch('/api/ai/group-outfit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ occasion: occName, members: membersWithPhotos })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setAiAnalysis({ coordinationLogic: data.coordinationLogic, themeName: data.themeName });
+        
+        const mappedResults = membersWithPhotos.map(member => {
+           const piece = (data.pieces || []).find((p: any) => p.memberId === member.id);
+           const sp = piece?.scrapedProduct;
+           
+           return {
+             memberId: member.id,
+             products: sp ? [{
+                id: crypto.randomUUID(),
+                name: sp.name,
+                brand: sp.brand,
+                imageUrl: sp.imageUrl,
+                priceMin: sp.price,
+                priceMax: sp.priceMax || sp.price,
+                currency: sp.currency,
+                productUrl: sp.productUrl,
+                verdict: 'strong-buy',
+                verdictReasons: [piece.outfitQuery],
+                retailers: []
+             } as Product] : []
+           }
+        });
 
-    clearInterval(interval)
-    setProgress(100)
-
-    // Generate mock results for each member
-    const mockResults = membersWithPhotos.map((member, index) => ({
-      memberId: member.id,
-      products: mockProducts.slice(index * 2, index * 2 + 2),
-    }))
-
-    setResults(mockResults)
-    setIsGenerating(false)
-    toast.success('Coordinated outfits generated!')
+        setResults(mappedResults);
+        toast.success(`Generated: ${data.themeName}`);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error('Failed to coordinate group outfits.');
+    } finally {
+      clearInterval(interval)
+      setProgress(100)
+      setIsGenerating(false)
+    }
   }
 
   const handleAddAllToChat = () => {
     const allProducts = results.flatMap((r) => r.products)
-    onAddToChat(allProducts)
+    onAddToChat(allProducts, aiAnalysis.coordinationLogic, aiAnalysis.themeName)
     onOpenChange(false)
   }
 

@@ -296,7 +296,7 @@ export function MainApp() {
     }
   }
 
-  const handleGroupOutfits = async (products: Product[]) => {
+  const handleGroupOutfits = async (products: Product[], coordinationLogic?: string, themeName?: string) => {
     let sessionId = currentSessionId
     if (!sessionId) {
       sessionId = createNewSession()
@@ -305,44 +305,25 @@ export function MainApp() {
     addMessage(sessionId, {
       id: crypto.randomUUID(),
       role: 'user',
-      content: 'Show me coordinated group outfits',
+      content: 'Here are photos of our group for coordination styling',
       timestamp: new Date(),
     })
 
     setCurrentView('chat')
 
-    try {
-      // We use the first person's image as a base for coordination logic if available
-      const response = await fetch('/api/ai/group-outfit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: [products[0]?.imageUrl] })
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        addMessage(sessionId!, {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: `**Group Theme: ${data.themeName}**\n\n${data.coordinationLogic}`,
-          timestamp: new Date(),
-          products: products // Keep the selected products but the AI provides the logic
-        })
-      }
-    } catch (error) {
-      console.error('Group AI Error:', error);
-      addMessage(sessionId!, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: 'Here are coordinated outfit suggestions for your group! These pieces complement each other perfectly.',
-        timestamp: new Date(),
-        products,
-      })
-    }
+    const safeThemeName = themeName || 'Coordinated Group Outfits';
+    const safeLogic = coordinationLogic || 'These pieces complement each other perfectly based on your group analysis.';
+
+    addMessage(sessionId!, {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: `**Group Theme: ${safeThemeName}**\n\n${safeLogic}`,
+      timestamp: new Date(),
+      products: products
+    })
   }
 
-  const handleFutureStyleProducts = async (products: Product[]) => {
+  const handleFutureStyleProducts = (products: Product[], evolutionData?: any) => {
     let sessionId = currentSessionId
     if (!sessionId) {
       sessionId = createNewSession()
@@ -351,44 +332,23 @@ export function MainApp() {
     addMessage(sessionId, {
       id: crypto.randomUUID(),
       role: 'user',
-      content: 'Show me future-proof wardrobe investments',
+      content: 'I want to future-proof my wardrobe based on your style analysis.',
       timestamp: new Date(),
     })
 
     setCurrentView('chat')
 
-    try {
-      const response = await fetch('/api/ai/style-predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: 'default-user' })
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        addMessage(sessionId!, {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: `**Trend Forecast:** ${data.trendForecast}\n\n${data.evolutionReasoning}`,
-          timestamp: new Date(),
-          products: data.investmentPieces.map((p: any) => ({
-            id: crypto.randomUUID(),
-            name: p.item,
-            brand: 'Future Investment',
-            imageUrl: 'https://images.unsplash.com/photo-1591047139829-d91aec36beea?auto=format&fit=crop&q=80&w=400',
-            priceMin: 150,
-            priceMax: 500,
-            currency: 'USD',
-            verdict: 'strong-buy',
-            verdictReasons: [p.reason],
-            retailers: []
-          }))
-        })
-      }
-    } catch (error) {
-      console.error('Future Prediction Error:', error);
-    }
+    const trendText = evolutionData 
+      ? `**Trend Forecast: ${evolutionData.currentStyle} ➞ ${evolutionData.predictedStyle}**\n\nTimeline: ${evolutionData.timeline} (${evolutionData.confidence}% confidence)\n\n**Key Influences:**\n${evolutionData.influences.map((inf: string) => `• ${inf}`).join('\n')}`
+      : `Here are the top lifetime investment pieces to future-proof your wardrobe.`;
+
+    addMessage(sessionId!, {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: trendText,
+      timestamp: new Date(),
+      products: products
+    })
   }
 
   const handleAILabFeature = (feature: string) => {

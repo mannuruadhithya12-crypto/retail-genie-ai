@@ -1,31 +1,68 @@
 import { NextResponse } from 'next/server';
-import { generateOllama } from '@/lib/ollama';
+import { chatOllama } from '@/lib/ollama';
+import { LiveProductSearch } from '@/lib/live-search';
 
 export async function POST(req: Request) {
   try {
-    const { images } = await req.json();
+    const { occasion, members } = await req.json();
 
-    const prompt = `Analyze these ${images.length} people's styles and colors for "Group Coordination".
-    Identify dominant colors and styles. Suggest a theme that coordinates everyone.
+    if (!members || !Array.isArray(members)) {
+      return NextResponse.json({ error: "Missing members array" }, { status: 400 });
+    }
+
+    const memberDescriptions = members.map((m: any) => m.name).join(', ');
+
+    const prompt = `A user wants to style a group of people for a "${occasion}".
+    The group members are: ${memberDescriptions}.
     
-    Return ONLY JSON:
+    1. Define a cohesive overarching style theme for the whole group.
+    2. Suggest a specific outfit for each person by their name. Make it easy to search online.
+    
+    RETURN ONLY JSON:
     {
       "themeName": "Theme title",
-      "coordinationTips": ["tip1", "tip2"],
-      "suggestedColors": ["#hex1", "#hex2"],
-      "stylingVerdict": "summary text"
+      "coordinationLogic": "Why this theme works and how it complements everyone",
+      "pieces": [
+        { "memberId": "1", "memberName": "You", "outfitQuery": "navy blue evening gown dress" },
+        { "memberId": "2", "memberName": "Person 2", "outfitQuery": "mens charcoal grey tailored suit" }
+      ]
     }`;
 
-    // Use the first image for vision analysis in this demo
-    const response = await generateOllama({
-      model: 'llava',
-      prompt,
-      images: [images[0].split(',')[1]],
-      format: 'json'
-    });
+    // Note: To keep latency reasonable, we use text generation for group theming
+    // instead of running heavy multimodal vision on 4 large base64 images.
+    const response = await chatOllama('llama3', [
+      { role: 'user', content: prompt }
+    ]);
 
-    return NextResponse.json(JSON.parse(response));
+    let data;
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      data = JSON.parse(jsonMatch ? jsonMatch[0] : response);
+    } catch(e) {
+      data = { themeName: "Coordinated Elegance", coordinationLogic: "Matching color families.", pieces: [] };
+    }
+
+    // Run live scraper against each assigned outfit concept in parallel
+    if (data.pieces && Array.isArray(data.pieces)) {
+      await Promise.all(data.pieces.map(async (piece: any) => {
+        try {
+          // ensure the right memberId matches the input
+          const matchingMember = members.find(m => m.name === piece.memberName);
+          if (matchingMember) piece.memberId = matchingMember.id;
+
+          const results = await LiveProductSearch.searchProducts(`${piece.outfitQuery} fashion clothing`, 1);
+          if (results && results.length > 0) {
+            piece.scrapedProduct = results[0];
+          }
+        } catch(e) {
+          console.error(`Scraping failed for ${piece.outfitQuery}:`, e);
+        }
+      }));
+    }
+
+    return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
