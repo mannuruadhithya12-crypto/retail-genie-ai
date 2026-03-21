@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { chatOllama } from '@/lib/ollama';
+import { LiveProductSearch } from '@/lib/live-search';
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
       ]
     }`;
 
+    // Force Ollama to be more clothing-specific
     const response = await chatOllama('llama3', [
       { role: 'system', content: 'You are a luxury fashion mood translator.' },
       { role: 'user', content: prompt }
@@ -30,6 +32,24 @@ export async function POST(request: Request) {
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       data = JSON.parse(jsonMatch ? jsonMatch[0] : response);
+
+      if (data.pieces && Array.isArray(data.pieces)) {
+        await Promise.all(
+          data.pieces.map(async (piece: any) => {
+            try {
+              // Get the top product result mapped to this generated piece
+              const query = `${piece.name} ${mood} clothing trend fashion`;
+              const results = await LiveProductSearch.searchProducts(query, 1);
+              if (results && results.length > 0) {
+                piece.scrapedProduct = results[0];
+              }
+            } catch (scrapeErr) {
+              console.error(`[Scraper] Failed to scrape piece: ${piece.name}`, scrapeErr);
+            }
+          })
+        );
+      }
+
     } catch (e) {
       data = { advice: response, styleTags: [], colorPalette: [], pieces: [] };
     }
@@ -39,3 +59,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

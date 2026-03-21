@@ -117,29 +117,36 @@ export function MainApp() {
       const response = await fetch('/api/ai/mood-outfit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moodText: `I feel ${mood}`, userId: 'default-user' })
+        body: JSON.stringify({ mood: mood, preferences: {} })
       });
       
       const data = await response.json();
       
       if (response.ok) {
+        const colorString = data.colorPalette && Array.isArray(data.colorPalette) ? data.colorPalette.join(', ') : 'Mixed';
+        const styleString = data.styleTags && Array.isArray(data.styleTags) ? data.styleTags.join(', ') : 'Fashion Forward';
+        
         addMessage(sessionId!, {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: `${data.emotionAnalysis}\n\n**Style:** ${data.style}\n**Suggested Palette:** ${data.colors.join(', ')}`,
+          content: `${data.advice || "Here are some stylish picks based on your mood."}\n\n**Style:** ${styleString}\n**Suggested Palette:** ${colorString}`,
           timestamp: new Date(),
-          products: data.outfits.map((o: any) => ({
-            id: crypto.randomUUID(),
-            name: o.name,
-            brand: 'AI Suggestion',
-            imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400',
-            priceMin: 49,
-            priceMax: 199,
-            currency: 'USD',
-            verdict: 'strong-buy',
-            verdictReasons: o.items,
-            retailers: []
-          }))
+          products: (data.pieces || []).map((p: any) => {
+            const sp = p.scrapedProduct;
+            return {
+              id: crypto.randomUUID(),
+              name: sp ? sp.name : p.name,
+              brand: sp ? sp.brand : 'AI Suggestion',
+              imageUrl: sp ? sp.imageUrl : 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=400',
+              priceMin: sp ? sp.price : 49,
+              priceMax: sp ? (sp.priceMax || sp.price) : 199,
+              currency: sp ? sp.currency : 'USD',
+              productUrl: sp ? sp.productUrl : '#',
+              verdict: 'strong-buy',
+              verdictReasons: [p.reason || 'Perfect for this mood'],
+              retailers: []
+            };
+          })
         })
       }
     } catch (error) {
@@ -225,20 +232,24 @@ export function MainApp() {
         addMessage(sessionId!, {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: `**${data.fusionName}**\n\n${data.outfitDescription}\n\n**Key Elements:**\n${data.keyElements.map((e: string) => `• ${e}`).join('\n')}`,
+          content: `**${data.lookName || data.fusionName || 'Fusion Look'}**\n\n${data.description || data.outfitDescription || 'A unique blend'}\n\n**Key Elements:**\n${(data.keyFeatures || data.keyElements || []).map((e: string) => `• ${e}`).join('\n')}`,
           timestamp: new Date(),
-          products: [{
-            id: crypto.randomUUID(),
-            name: data.fusionName,
-            brand: 'Cultural Fusion',
-            imageUrl: 'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&q=80&w=400',
-            priceMin: 89,
-            priceMax: 299,
-            currency: 'USD',
-            verdict: 'strong-buy',
-            verdictReasons: data.keyElements,
-            retailers: []
-          }]
+          products: (data.pieces || []).map((p: any) => {
+            const sp = p.scrapedProduct;
+            return {
+              id: crypto.randomUUID(),
+              name: sp ? sp.name : p.name,
+              brand: sp ? sp.brand : 'Cultural Fusion',
+              imageUrl: sp ? sp.imageUrl : 'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&q=80&w=400',
+              priceMin: sp ? sp.price : 89,
+              priceMax: sp ? (sp.priceMax || sp.price) : 299,
+              currency: sp ? sp.currency : 'USD',
+              productUrl: sp ? sp.productUrl : '#',
+              verdict: 'strong-buy',
+              verdictReasons: [p.reason || 'Perfect for this fusion'],
+              retailers: []
+            };
+          })
         })
       }
     } catch (error) {

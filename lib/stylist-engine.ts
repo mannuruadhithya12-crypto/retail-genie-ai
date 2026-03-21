@@ -6,8 +6,22 @@ export class StylistEngine {
     try {
       console.log(`[StylistEngine] Processing: "${query}"`);
 
+      // 0. AI EXTRACTION: Extract only the product keywords from the user query
+      const extractPrompt = `Extract Search Keywords.
+      Rule: Return ONLY 1 line of concise keywords to search for clothing online. Ignore conversational fluff. Do not wrap in quotes. Keep budget or brand if mentioned (e.g. "under 50", "asos").
+      Query: "${query}"`;
+      
+      let searchQuery = query;
+      try {
+        const extracted = await chatOllama('llama3', [{ role: 'user', content: extractPrompt }]);
+        searchQuery = extracted.trim().replace(/^"|"$|^\*|\*$/g, '');
+        console.log(`[StylistEngine] Extracted precise search query: "${searchQuery}"`);
+      } catch (err) {
+        console.error('[StylistEngine] Query extraction failed, reverting to basic query', err);
+      }
+
       // 1. LIVE SEARCH: Fetch real products from the web in real-time
-      const liveProducts = await LiveProductSearch.searchProducts(query, 5);
+      const liveProducts = await LiveProductSearch.searchProducts(searchQuery, 4);
       console.log(`[StylistEngine] Found ${liveProducts.length} live products`);
 
       // 2. AI REASONING: Generate expert stylist advice using Ollama
@@ -17,12 +31,12 @@ export class StylistEngine {
           `[${i + 1}] ${p.name} by ${p.brand} - $${p.price} - ${p.verdict}: ${p.verdictReasons.join(', ')}`
         ).join('\n');
 
-        const prompt = `You are a senior AI fashion stylist. A user asked: "${query}"
+        const prompt = `You are a senior AI fashion stylist. The user requested: "${query}"
 
-I found these real products from top fashion stores:
-${productSummary}
+        We automatically searched the web and found these REAL items you can recommend:
+        ${productSummary}
 
-Give expert styling advice in 2-3 sentences. Be specific, confident, and helpful. Do not list prices again.`;
+        Give expert styling advice incorporating these items in 2-3 sentences. Do not list prices again. Do not hallucinate items that aren't on this list. Tell them to click the direct product links on the cards below.`;
 
         stylistAdvice = await chatOllama('llama3', [
           { role: 'system', content: 'You are a professional AI fashion stylist who gives concise, expert advice.' },
@@ -31,7 +45,7 @@ Give expert styling advice in 2-3 sentences. Be specific, confident, and helpful
         ]);
       } catch (aiError) {
         console.error('[StylistEngine] Ollama error, using fallback advice');
-        stylistAdvice = `Here are my top picks for "${query}" from across the web! I've curated these based on price, quality signals, and style. Check each item's details and use the Buy Now link to shop directly.`;
+        stylistAdvice = `Here are my top picks for "${query}" from across the web! I've curated these based on price, quality signals, and style. Use the View Item direct links on the cards below to shop!`;
       }
 
       return {
@@ -41,7 +55,7 @@ Give expert styling advice in 2-3 sentences. Be specific, confident, and helpful
     } catch (error: any) {
       console.error('[StylistEngine] CRITICAL Error:', error.message);
       return {
-        stylist_advice: `I encountered an error fetching products: ${error.message}. Please ensure your internet connection is active.`,
+        stylist_advice: `I gathered some ideas, but hit a snag fetching live data. Let's adjust the search!`,
         products: []
       };
     }
