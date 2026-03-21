@@ -2,15 +2,6 @@ import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/retail-genie';
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
-}
-
-/**
- * Global is used here to maintain a cached connection across hot reloads
- * in development. This prevents connections growing exponentially
- * during API Route usage.
- */
 let cached = (global as any).mongoose;
 
 if (!cached) {
@@ -18,20 +9,32 @@ if (!cached) {
 }
 
 async function dbConnect() {
-  if (cached.conn) {
-    return cached.conn;
-  }
+  if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      connectTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 5000,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      return mongoose;
-    });
+    console.log('🔌 Attempting to connect to MongoDB...');
+    cached.promise = mongoose.connect(MONGODB_URI, opts)
+      .then((mongoose) => {
+        console.log('✅ MongoDB Connected Successfully');
+        return mongoose;
+      })
+      .catch((err) => {
+        console.error('❌ MongoDB Connection Error:', err.message);
+        // If the primary URI fails and it's not local, try local as a last resort
+        if (MONGODB_URI !== 'mongodb://localhost:27017/retail-genie') {
+          console.log('🔄 Retrying with local MongoDB...');
+          return mongoose.connect('mongodb://localhost:27017/retail-genie', opts);
+        }
+        throw err;
+      });
   }
-  
+
   try {
     cached.conn = await cached.promise;
   } catch (e) {
