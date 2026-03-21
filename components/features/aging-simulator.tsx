@@ -1,14 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Clock, Sparkles, X, Loader2, Upload } from 'lucide-react'
+import { Clock, Sparkles, X, Loader2, Upload, Video } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 interface AgingSimulatorProps {
   open: boolean
@@ -46,6 +47,47 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
     pillingLevel: number
   } | null>(null)
 
+  const [isCameraActive, setIsCameraActive] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  const toggleCamera = async () => {
+    if (isCameraActive) {
+      if (videoRef.current?.srcObject) {
+        (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop())
+      }
+      setIsCameraActive(false)
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          setIsCameraActive(true)
+        }
+      } catch (err) {
+        console.error("Camera error:", err)
+        toast.error("Could not access camera")
+      }
+    }
+  }
+
+  const captureFrame = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.drawImage(video, 0, 0)
+        const frame = canvas.toDataURL('image/jpeg')
+        setCustomImage(frame)
+        // Stop camera after capture to save resources
+        toggleCamera()
+      }
+    }
+  }
+
   const handleSimulate = async (optionId: string) => {
     setSelectedOption(optionId)
     setIsProcessing(true)
@@ -73,12 +115,12 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
 
       if (response.ok) {
         setAgingDetails({
-          colorFading: Math.round(data.durabilityScore / 3),
+          colorFading: data.durabilityScore < 60 ? Math.round(data.durabilityScore / 2) : Math.round(data.durabilityScore / 4),
           fabricWear: Math.round((100 - data.durabilityScore) / 2),
           pillingLevel: Math.round((100 - data.durabilityScore) / 1.5),
         })
         setAgedImage(displayImage) // Still use original for visual filter simulation
-        toast.success('Simulation complete!')
+        toast.success(`6-Month Wear Analysis Complete!`)
       }
     } catch (error) {
       console.error('Aging AI Error:', error);
@@ -97,30 +139,36 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
 
   const getFilterStyle = () => {
     if (!agingDetails) return {}
+    const isSixMonths = selectedOption === '6-months';
+    const baseFilter = `sepia(${agingDetails.colorFading}%) brightness(${100 - agingDetails.fabricWear / 3}%) contrast(${95 + agingDetails.pillingLevel / 10}%)`;
+    // Add subtle blur/grain simulation for older items
     return {
-      filter: `sepia(${agingDetails.colorFading}%) brightness(${100 - agingDetails.fabricWear / 3}%) contrast(${95 + agingDetails.pillingLevel / 10}%)`,
+      filter: isSixMonths ? `${baseFilter} saturate(85%)` : baseFilter,
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+    <Dialog open={open} onOpenChange={(val) => {
+      if (!val && isCameraActive) toggleCamera();
+      onOpenChange(val);
+    }}>
+      <DialogContent className="max-w-2xl bg-slate-950 border-white/10">
         <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-white font-headline">
             <Clock className="h-5 w-5 text-primary" />
-            Outfit Aging Simulator
+            Vivid Aging Simulator v2.0
           </DialogTitle>
           <DialogDescription className="sr-only">
             See how this garment will look after extended use
           </DialogDescription>
-          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="text-slate-400">
             <X className="h-5 w-5" />
           </Button>
         </DialogHeader>
 
         <div className="space-y-6">
-          <p className="text-sm text-muted-foreground">
-            See how <span className="font-medium text-foreground">{productName}</span> will look after long-term usage
+          <p className="text-sm text-slate-400">
+            Real-time Material Science Engine: Simulating <span className="font-medium text-white">{productName}</span> lifespan.
           </p>
 
           {/* Aging Options */}
@@ -131,8 +179,11 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
                 variant={selectedOption === option.id ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleSimulate(option.id)}
-                disabled={isProcessing}
-                className="flex-1"
+                disabled={isProcessing || !displayImage}
+                className={cn(
+                  "flex-1 rounded-xl transition-all font-headline text-[10px] uppercase tracking-widest",
+                  selectedOption === option.id ? "bg-primary shadow-[0_0_15px_rgba(219,144,255,0.4)]" : "border-white/10 hover:bg-white/5"
+                )}
               >
                 {option.label}
               </Button>
@@ -142,9 +193,25 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
           {/* Image Comparison */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Original</p>
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden border border-border bg-muted/10 group">
-                {displayImage ? (
+              <div className="flex justify-between items-center">
+                 <p className="text-xs font-headline font-bold text-slate-500 uppercase tracking-wider">Live Input</p>
+                 <Button variant="ghost" size="sm" onClick={toggleCamera} className="h-7 text-[9px] uppercase tracking-tighter text-secondary">
+                    <Video className="h-3 w-3 mr-1" /> {isCameraActive ? 'Cancel' : 'Use Camera'}
+                 </Button>
+              </div>
+              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/5 bg-slate-900 group">
+                <canvas ref={canvasRef} className="hidden" />
+                {isCameraActive ? (
+                  <div className="absolute inset-0">
+                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover grayscale-[0.2]" />
+                    <Button 
+                      onClick={captureFrame}
+                      className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 hover:scale-110 transition-transform"
+                    >
+                      <Sparkles className="h-6 w-6 text-primary" />
+                    </Button>
+                  </div>
+                ) : displayImage ? (
                   <>
                     <Image
                       src={displayImage}
@@ -154,13 +221,13 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
                     />
                     <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white">
                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                       <span className="text-sm font-medium">Change Photo</span>
+                       <span className="text-[10px] font-headline font-bold uppercase tracking-widest">Re-upload</span>
                     </label>
                   </>
                 ) : (
-                  <label className="absolute inset-0 flex flex-col items-center justify-center hover:bg-muted/30 transition-colors cursor-pointer text-muted-foreground hover:text-foreground">
-                    <Upload className="h-8 w-8 mb-2 opacity-50" />
-                    <span className="text-sm font-medium">Upload Live Picture</span>
+                  <label className="absolute inset-0 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer text-slate-500 hover:text-white">
+                    <Upload className="h-8 w-8 mb-2 opacity-30" />
+                    <span className="text-[10px] font-headline font-bold uppercase tracking-widest">Garment Vision Scan</span>
                     <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                   </label>
                 )}
@@ -168,28 +235,28 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {selectedOption ? agingOptions.find((o) => o.id === selectedOption)?.label : 'Aged Preview'}
+              <p className="text-xs font-headline font-bold text-slate-500 uppercase tracking-wider">
+                {selectedOption ? agingOptions.find((o) => o.id === selectedOption)?.label : 'Aged Result'}
               </p>
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden border border-border bg-muted/20">
+              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/5 bg-slate-900 shadow-inner">
                 {isProcessing ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-                    <p className="text-sm font-medium">Simulating wear...</p>
-                    <Progress value={progress} className="w-32 h-1.5 mt-2" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-sm">
+                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+                    <p className="text-[10px] font-headline font-bold uppercase tracking-[0.2em] text-primary">Scanning Matter...</p>
+                    <Progress value={progress} className="w-32 h-1 bg-white/10 rounded-full mt-4" />
                   </div>
                 ) : agedImage ? (
                   <Image
                     src={agedImage}
                     alt="Aged preview"
                     fill
-                    className="object-cover transition-all duration-500"
+                    className="object-cover transition-all duration-1000"
                     style={getFilterStyle()}
                   />
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                    <Clock className="h-8 w-8 mb-2 opacity-50" />
-                    <p className="text-sm">Select an aging option</p>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600">
+                    <Clock className="h-8 w-8 mb-2 opacity-20" />
+                    <p className="text-[10px] font-headline font-bold uppercase tracking-widest">Awaiting Analysis</p>
                   </div>
                 )}
               </div>

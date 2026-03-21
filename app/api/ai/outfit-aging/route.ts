@@ -6,13 +6,18 @@ export async function POST(req: Request) {
     const { image, productName, timeframe } = await req.json();
 
     const prompt = `Act as a material science and textile expert. 
-    Analyze the durability of clothing item: "${productName || 'unknown garment'}".
-    Assess how it will degrade given the timeframe: "${timeframe}".
+    Analyze the durability and molecular degradation of a clothing item: "${productName || 'unknown garment'}".
+    Assess how it will visually and structurally degrade given the specific timeframe: "${timeframe}".
+    
+    GUIDELINES:
+    - If "10-washes": Focus on initial color fastness and seam tension.
+    - If "6-months": Focus on micro-fiber breakdown, pilling in high-friction areas (underarms, thighs), and structural sag.
+    - If "1-year": Focus on significant mechanical wear, thinning of the fabric, and 20%+ color saturation loss.
     
     Return ONLY JSON matching this exact structure:
     {
       "durabilityScore": 65,
-      "analysis": "Brief scientific summary of how this specific fabric breaks down."
+      "analysis": "Scientific summary of how THIS specific material (cotton/poly/denim/etc) breaks down over ${timeframe}."
     }
     
     The durabilityScore must be an integer between 1 and 100, where 100 is pristine and 1 is destroyed.`;
