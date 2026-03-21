@@ -1,6 +1,10 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/retail-genie';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+}
 
 let cached = (global as any).mongoose;
 
@@ -14,23 +18,21 @@ async function dbConnect() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      connectTimeoutMS: 5000,
-      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 30000,        // 30 seconds for Atlas SRV DNS
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      family: 4,                       // Force IPv4 for faster DNS resolution
     };
 
-    console.log('🔌 Attempting to connect to MongoDB...');
-    cached.promise = mongoose.connect(MONGODB_URI, opts)
+    console.log('🔌 Connecting to MongoDB Atlas...');
+    cached.promise = mongoose.connect(MONGODB_URI!, opts)
       .then((mongoose) => {
-        console.log('✅ MongoDB Connected Successfully');
+        console.log('✅ MongoDB Atlas Connected Successfully');
         return mongoose;
       })
       .catch((err) => {
-        console.error('❌ MongoDB Connection Error:', err.message);
-        // If the primary URI fails and it's not local, try local as a last resort
-        if (MONGODB_URI !== 'mongodb://localhost:27017/retail-genie') {
-          console.log('🔄 Retrying with local MongoDB...');
-          return mongoose.connect('mongodb://localhost:27017/retail-genie', opts);
-        }
+        cached.promise = null;
+        console.error('❌ MongoDB Atlas Connection Failed:', err.message);
         throw err;
       });
   }
