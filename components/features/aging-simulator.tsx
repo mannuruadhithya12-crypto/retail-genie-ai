@@ -51,7 +51,7 @@ export function AgingSimulator({ open, onOpenChange, imageUrl, productName }: Ag
       const response = await fetch('/api/ai/outfit-aging', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: imageUrl, timeframe: optionId })
+        body: JSON.stringify({ image: imageUrl, timeframe: optionId, productName })
       });
       
       const data = await response.json();

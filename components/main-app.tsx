@@ -25,7 +25,6 @@ import { useAppStore } from '@/lib/store'
 import { Product, TryOnResult, Mood, SavedOutfit } from '@/lib/types'
 import { Plus, Mic, Send } from 'lucide-react'
 import { toast } from 'sonner'
-import { mockProducts } from '@/lib/mock-data'
 
 type ViewType = 'dashboard' | 'chat' | 'outfits' | 'history' | 'preferences' | 'ai-lab' | 'atelier'
 
@@ -374,7 +373,7 @@ export function MainApp() {
         setShowMoodTranslator(true)
         break
       case 'aging':
-        setAgingProduct(mockProducts[0])
+        setAgingProduct(products[0] || null)
         setShowAgingSimulator(true)
         break
       case 'group':

@@ -5,7 +5,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { ChatMessageComponent, TypingIndicator } from './chat-message'
 import { ChatInput } from './chat-input'
 import { useAppStore } from '@/lib/store'
-import { mockProducts, aiResponses } from '@/lib/mock-data'
 import type { ChatMessage, Product } from '@/lib/types'
 
 interface ChatAreaProps {

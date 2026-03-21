@@ -19,8 +19,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { mockProducts } from '@/lib/mock-data'
 import dynamic from 'next/dynamic'
+import type { Product } from '@/lib/types'
 const ARMirror = dynamic(() => import('../ar/ARMirror').then(mod => mod.ARMirror), { ssr: false })
 import type { Garment } from '../ar/GarmentLayerManager'
 import { useEffect } from 'react'
@@ -29,11 +29,19 @@ export function AtelierView() {
   const [isCamerActive, setIsCameraActive] = useState(false)
   const [selectedWardrobeItem, setSelectedWardrobeItem] = useState<string | null>(null)
   const [clothingDb, setClothingDb] = useState<Garment[]>([])
+  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([])
 
   useEffect(() => {
     fetch('/api/clothing')
       .then(res => res.json())
       .then(data => setClothingDb(data))
+      .catch(console.error);
+
+    fetch('/api/products/search?q=new arrivals trending')
+      .then(res => res.json())
+      .then(data => {
+        if (data.products) setRecommendedProducts(data.products)
+      })
       .catch(console.error);
   }, []);
 
@@ -220,7 +228,7 @@ export function AtelierView() {
           </div>
 
           <div className="flex overflow-x-auto gap-6 pb-6 hide-scrollbar">
-            {mockProducts.map((product) => (
+            {recommendedProducts.map((product) => (
               <div key={product.id} className="min-w-[300px] group">
                 <div className="relative aspect-[3/4] rounded-3xl overflow-hidden mb-4 border border-white/5 group-hover:border-primary/30 transition-all duration-500">
                   <Image src={product.imageUrl} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
