@@ -74,10 +74,13 @@ export interface TryOnResult {
   personImageUrl: string
   garmentImageUrl: string
   resultImageUrl: string
-  fitVerdict: string
-  fitReasons: string[]
-  climateSuitability: string
+  fitVerdict?: string
+  fitReasons?: string[]
+  climateSuitability?: string
   backgroundUrl?: string
+  fitScore?: number
+  styleAnalysis?: string
+  recommendations?: string[]
 }
 
 export interface SavedOutfit {

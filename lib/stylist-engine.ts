@@ -21,8 +21,17 @@ export class StylistEngine {
       }
 
       // 1. LIVE SEARCH: Fetch real products from the web in real-time
-      const liveProducts = await LiveProductSearch.searchProducts(searchQuery, 4);
-      console.log(`[StylistEngine] Found ${liveProducts.length} live products`);
+      let liveProducts: any[] = [];
+      try {
+        const [liveProductsM, liveProductsF] = await Promise.all([
+          LiveProductSearch.searchProducts(`${searchQuery} mens clothing`, 2).catch(() => []),
+          LiveProductSearch.searchProducts(`${searchQuery} womens clothing`, 2).catch(() => [])
+        ]);
+        liveProducts = [...liveProductsM, ...liveProductsF].sort(() => Math.random() - 0.5);
+        console.log(`[StylistEngine] Found ${liveProducts.length} mixed live products (${liveProductsM.length}M / ${liveProductsF.length}F)`);
+      } catch(err) {
+        console.error("Live Search failed", err);
+      }
 
       // 2. AI REASONING: Generate expert stylist advice using Ollama
       let stylistAdvice = '';
