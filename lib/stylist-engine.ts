@@ -6,19 +6,9 @@ export class StylistEngine {
     try {
       console.log(`[StylistEngine] Processing: "${query}"`);
 
-      // 0. AI EXTRACTION: Extract only the product keywords from the user query
-      const extractPrompt = `Extract Search Keywords.
-      Rule: Return ONLY 1 line of concise keywords to search for clothing online. Ignore conversational fluff. Do not wrap in quotes. Keep budget or brand if mentioned (e.g. "under 50", "asos").
-      Query: "${query}"`;
-      
-      let searchQuery = query;
-      try {
-        const extracted = await chatOllama('llama3', [{ role: 'user', content: extractPrompt }]);
-        searchQuery = extracted.trim().replace(/^"|"$|^\*|\*$/g, '');
-        console.log(`[StylistEngine] Extracted precise search query: "${searchQuery}"`);
-      } catch (err) {
-        console.error('[StylistEngine] Query extraction failed, reverting to basic query', err);
-      }
+      // 0. AI EXTRACTION: Bypassed to massively improve system latency.
+      let searchQuery = query.replace(/[^\w\s-]/gi, '').trim().substring(0, 50);
+      console.log(`[StylistEngine] Fast Extracted search query: "${searchQuery}"`);
 
       // 1. LIVE SEARCH: Fetch real products from the web in real-time
       let liveProducts: any[] = [];

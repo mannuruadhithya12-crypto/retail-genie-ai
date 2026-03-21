@@ -79,8 +79,7 @@ export class LiveProductSearch {
           'amazon.com', 'myntra.com', 'flipkart.com', 'gap.com', 'mango.com',
           'forever21.com', 'shein.com', 'target.com'
         ]
-      }, { timeout: 15000 });
-
+      }, { timeout: 9000 });
       const data = response.data as any;
       const results = data.results || [];
       const topImages: string[] = data.images || [];
@@ -145,7 +144,7 @@ export class LiveProductSearch {
             'Origin': 'https://www.asos.com',
             'Referer': `https://www.asos.com/search/?q=${encodeURIComponent(query)}`
           },
-          timeout: 10000
+          timeout: 9000
         });
         const data = response.data as any;
 

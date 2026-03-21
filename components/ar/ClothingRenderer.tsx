@@ -1,6 +1,6 @@
-import React, { useRef, Suspense } from 'react';
+import React, { useRef, useState, useEffect, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF, useTexture } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { Garment } from './GarmentLayerManager';
 import { ClothPhysicsEngine } from './ClothPhysicsEngine';
@@ -17,8 +17,27 @@ function GLTFModel({ url }: { url: string }) {
 }
 
 function ImageModel({ url }: { url: string }) {
-  const texture = useTexture(url);
-  texture.colorSpace = THREE.SRGBColorSpace;
+  const [texture, setTexture] = useState<THREE.Texture | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    new THREE.TextureLoader().load(
+      url, 
+      (loadedTexture) => {
+        if (!active) return;
+        loadedTexture.colorSpace = THREE.SRGBColorSpace;
+        setTexture(loadedTexture);
+      },
+      undefined,
+      (err) => {
+        console.error("Failed to load texture for AR Mirror fallback:", err);
+      }
+    );
+    return () => { active = false; };
+  }, [url]);
+
+  if (!texture) return null;
+
   return (
     <mesh>
       <planeGeometry args={[1, 1.5, 10, 10]} />
@@ -127,13 +146,13 @@ export function ClothingRenderer({ garment, poseResults }: ClothingRendererProps
 
   return (
     <group ref={meshRef}>
-      <Suspense fallback={null}>
+      <React.Suspense fallback={null}>
         {garment.modelUrl && garment.modelUrl.length > 0 ? (
           <GLTFModel url={garment.modelUrl} />
         ) : (
           garment.imageUrl ? <ImageModel url={garment.imageUrl} /> : null
         )}
-      </Suspense>
+      </React.Suspense>
     </group>
   );
 }

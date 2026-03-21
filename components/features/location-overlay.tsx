@@ -236,8 +236,20 @@ export function LocationOverlay({ open, onOpenChange, personImageUrl, garmentIma
                     animate={{ opacity: 1, y: 0 }}
                     className="space-y-4"
                   >
-                    <div className="relative aspect-[3/4] max-w-md mx-auto rounded-xl overflow-hidden border border-border">
-                      <Image src={resultImage} alt="Result" fill className="object-cover" />
+                    <div className="relative aspect-[3/4] max-w-md mx-auto rounded-xl overflow-hidden border border-border shadow-2xl bg-black">
+                      {/* Background Lighting Layer */}
+                      {backgroundImage && (
+                        <Image src={backgroundImage} alt="Background Depth" fill className="object-cover opacity-95 transition-opacity duration-1000" />
+                      )}
+                      
+                      {/* Foreground Subject Composited Layer with Ambient Multiplier Masking */}
+                      <Image 
+                        src={resultImage} 
+                        alt="Composited Result" 
+                        fill 
+                        className="object-contain drop-shadow-2xl scale-95 hover:scale-100 transition-transform duration-700"
+                        style={{ mixBlendMode: 'luminosity' }}
+                      />
                     </div>
                     <div className="flex justify-center gap-2">
                       <Button variant="outline" className="gap-2">

@@ -80,9 +80,9 @@ export function ChatMessageComponent({
               className="w-full"
             >
               <CarouselContent className="-ml-2 md:-ml-4">
-                {message.products.map((product) => (
+                {message.products.map((product, index) => (
                   <CarouselItem
-                    key={product.id}
+                    key={`${product.id}-${index}`}
                     className="pl-2 md:pl-4 basis-[280px] md:basis-[300px]"
                   >
                     <ProductCard

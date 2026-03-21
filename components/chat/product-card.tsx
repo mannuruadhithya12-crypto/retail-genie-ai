@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { Eye, Heart, Sparkles, Leaf, Droplets } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +27,7 @@ const verdictConfig: Record<string, { label: string; className: string; icon: an
 }
 
 export function ProductCard({ product, onTryOn, onSave, onDetails }: ProductCardProps) {
+  const router = useRouter();
   const verdict = verdictConfig[product.verdict] || verdictConfig['consider'];
   const currencySymbols: Record<string, string> = {
     USD: '$', EUR: '€', GBP: '£', INR: '₹', JPY: '¥',
@@ -127,10 +129,13 @@ export function ProductCard({ product, onTryOn, onSave, onDetails }: ProductCard
             size="sm"
             variant="secondary"
             className="flex-1 gap-1"
-            onClick={() => onTryOn(product)}
+            onClick={() => {
+               const modelParam = (product as any).modelUrl ? `&model=${encodeURIComponent((product as any).modelUrl)}` : '';
+               router.push(`/ar?name=${encodeURIComponent(product.name)}&image=${encodeURIComponent(imgSrc)}${modelParam}`);
+            }}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            Try On
+            Try AR
           </Button>
           
           {buyUrl ? (
