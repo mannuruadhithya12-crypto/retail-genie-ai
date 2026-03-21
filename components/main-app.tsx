@@ -15,6 +15,7 @@ import { LocationOverlay } from './features/location-overlay'
 import { GroupOutfit } from './features/group-outfit'
 import { VoiceStylist } from './features/voice-stylist'
 import { FutureStyle } from './features/future-style'
+import { SocialEcho } from './features/social-echo'
 import { SavedOutfitsView } from './views/saved-outfits-view'
 import { HistoryView } from './views/history-view'
 import { PreferencesView } from './views/preferences-view'
@@ -40,7 +41,9 @@ export function MainApp() {
   const [showGroupOutfit, setShowGroupOutfit] = useState(false)
   const [showVoiceStylist, setShowVoiceStylist] = useState(false)
   const [showFutureStyle, setShowFutureStyle] = useState(false)
+  const [showSocialEcho, setShowSocialEcho] = useState(false)
   const [agingProduct, setAgingProduct] = useState<Product | null>(null)
+  const [socialEchoProduct, setSocialEchoProduct] = useState<Product | null>(null)
 
   const { setCurrentSession, saveOutfit, addMessage, currentSessionId, createNewSession, preferences, setIsTyping } = useAppStore()
 
@@ -398,7 +401,8 @@ export function MainApp() {
         handleSustainabilityFocus()
         break
       case 'social':
-        toast.info('Social Echo is available on product detail pages!')
+        setSocialEchoProduct(null)
+        setShowSocialEcho(true)
         break
       default:
         break
@@ -550,6 +554,12 @@ export function MainApp() {
         open={showFutureStyle}
         onOpenChange={setShowFutureStyle}
         onAddToChat={handleFutureStyleProducts}
+      />
+
+      <SocialEcho 
+        open={showSocialEcho}
+        onOpenChange={setShowSocialEcho}
+        product={socialEchoProduct}
       />
     </div>
   )
