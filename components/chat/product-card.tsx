@@ -16,41 +16,36 @@ interface ProductCardProps {
   onDetails: (product: Product) => void
 }
 
-const verdictConfig = {
-  'strong-buy': {
-    label: 'Strong Buy',
-    className: 'bg-success text-success-foreground',
-    icon: Sparkles,
-  },
-  'consider': {
-    label: 'Consider',
-    className: 'bg-warning text-warning-foreground',
-    icon: Eye,
-  },
-  'skip': {
-    label: 'Skip',
-    className: 'bg-destructive text-destructive-foreground',
-    icon: null,
-  },
+const verdictConfig: Record<string, { label: string; className: string; icon: any }> = {
+  'strong-buy': { label: 'Strong Buy', className: 'bg-green-600 text-white', icon: Sparkles },
+  'Strong Buy':  { label: 'Strong Buy', className: 'bg-green-600 text-white', icon: Sparkles },
+  'consider':    { label: 'Consider',   className: 'bg-yellow-500 text-black', icon: Eye },
+  'Consider':    { label: 'Consider',   className: 'bg-yellow-500 text-black', icon: Eye },
+  'skip':        { label: 'Skip',       className: 'bg-red-600 text-white', icon: null },
+  'Skip':        { label: 'Skip',       className: 'bg-red-600 text-white', icon: null },
 }
 
 export function ProductCard({ product, onTryOn, onSave, onDetails }: ProductCardProps) {
-  const verdict = verdictConfig[product.verdict]
+  const verdict = verdictConfig[product.verdict] || verdictConfig['consider'];
   const currencySymbols: Record<string, string> = {
     USD: '$', EUR: '€', GBP: '£', INR: '₹', JPY: '¥',
     CNY: '¥', AUD: 'A$', CAD: 'C$', BRL: 'R$', KRW: '₩',
-  }
-  const symbol = currencySymbols[product.currency] || '$'
+  };
+  const symbol = currencySymbols[product.currency] || '$';
+  // Support both LiveProduct (productUrl) and legacy Product (retailers[0].url)
+  const buyUrl = (product as any).productUrl || product.retailers?.[0]?.url;
+  const displayPrice = product.priceMin || (product as any).price || 0;
+  const imgSrc = (product as any).imageUrl || product.imageUrl || 'https://images.unsplash.com/photo-1545558014-8692077e9b5c?w=400&h=500&fit=crop';
 
   return (
     <Card className="group overflow-hidden bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
       <div className="relative aspect-[4/5] overflow-hidden">
-        <Image
-          src={product.imageUrl}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imgSrc}
           alt={product.name}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1603217192634-61068e4d4bf9?w=400&h=500&fit=crop'; }}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
         
@@ -109,11 +104,11 @@ export function ProductCard({ product, onTryOn, onSave, onDetails }: ProductCard
 
         <div className="flex items-baseline gap-1">
           <span className="text-lg font-semibold text-primary">
-            {symbol}{product.priceMin}
+            {symbol}{displayPrice > 0 ? displayPrice.toFixed(0) : 'View Price'}
           </span>
-          {product.priceMax > product.priceMin && (
+          {product.priceMax > product.priceMin && displayPrice > 0 && (
             <span className="text-sm text-muted-foreground">
-              - {symbol}{product.priceMax}
+              – {symbol}{product.priceMax.toFixed(0)}
             </span>
           )}
         </div>
@@ -138,22 +133,12 @@ export function ProductCard({ product, onTryOn, onSave, onDetails }: ProductCard
             Try On
           </Button>
           
-          {product.retailers?.[0]?.url ? (
-            <Button
-              size="sm"
-              variant="outline"
-              asChild
-            >
-              <a href={product.retailers[0].url} target="_blank" rel="noopener noreferrer">
-                Buy Now
-              </a>
+          {buyUrl ? (
+            <Button size="sm" className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700" asChild>
+              <a href={buyUrl} target="_blank" rel="noopener noreferrer">Buy Now →</a>
             </Button>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onDetails(product)}
-            >
+            <Button size="sm" variant="outline" className="flex-1" onClick={() => onDetails(product)}>
               Details
             </Button>
           )}
